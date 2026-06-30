@@ -1470,9 +1470,16 @@
   /* 今の図面に属するメモをまとめて描く */
   function drawNotes(ctx, project, state) {
     for (const n of (project.notes || [])) {
-      if ((n.layer || 'plan') !== currentLayer) continue;
+      if (!noteVisibleOnLayer(n, currentLayer)) continue;
       drawNote(ctx, n, { selected: state.selectedId === n.id });
     }
+  }
+
+  function noteVisibleOnLayer(note, layer) {
+    if (Array.isArray(note.layers) && note.layers.length) {
+      return note.layers.indexOf(layer) >= 0;
+    }
+    return (note.layer || 'plan') === layer;
   }
 
   /* ---- 手動の寸法線(任意の2点間) ---- */
@@ -1773,7 +1780,7 @@
       } else if (item.kind === 'dimensions') {
         if (dimVisibleOnLayer(el, currentLayer)) drawManualDim(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'notes') {
-        if ((el.layer || 'plan') === currentLayer) drawNote(ctx, el, { selected: state.selectedId === el.id });
+        if (noteVisibleOnLayer(el, currentLayer)) drawNote(ctx, el, { selected: state.selectedId === el.id });
       }
     }
     if (vis.fixtures) drawFixtureLegend(ctx, canvas, project);
@@ -1802,7 +1809,7 @@
   global.Render = {
     view, LAYERS, setLayer, getLayer, visibility,
     worldToScreen, screenToWorld, fitToView, render,
-    paperFrameWorld, getNorthMark, setRedrawCallback, noteBox, furnViewLayout, furnCardAt,
+    paperFrameWorld, getNorthMark, setRedrawCallback, noteBox, noteVisibleOnLayer, furnViewLayout, furnCardAt,
     sheetTableAt, setSheetTableLayout,
   };
 })(window);

@@ -129,7 +129,7 @@
     const notes = project.notes || [];
     for (let i = notes.length - 1; i >= 0; i--) {
       const n = notes[i];
-      if ((n.layer || 'plan') !== global.Render.getLayer()) continue;
+      if (!global.Render.noteVisibleOnLayer(n, global.Render.getLayer())) continue;
       const b = global.Render.noteBox(n.id);
       if (wx >= n.x && wx <= n.x + b.w && wy >= n.y && wy <= n.y + b.h) return n;
     }
@@ -189,7 +189,7 @@
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
     if (kind === 'fixtures') return !!vis.fixtures;
     if (kind === 'dimensions') return dimVisibleOnLayer(el, layer);
-    if (kind === 'notes') return (el.layer || 'plan') === layer;
+    if (kind === 'notes') return global.Render.noteVisibleOnLayer(el, layer);
     return true;
   }
 

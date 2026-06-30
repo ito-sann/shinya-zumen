@@ -1378,14 +1378,18 @@
       html += propNum('Y位置(mm)', 'y', el.y);
     }
     if (kind === 'notes') {
-      // どの図面に表示するかをあとから変えられる(矢印の先端はドラッグで移動)
-      const lopts = Object.entries(R.LAYERS).map(([k, v]) =>
-        `<option value="${k}"${(el.layer || 'plan') === k ? ' selected' : ''}>${v.label}</option>`).join('');
+      // どの図面に表示するかをあとから複数選べる(矢印の先端はドラッグで移動)
+      const noteLayers = Array.isArray(el.layers) && el.layers.length
+        ? el.layers
+        : [el.layer || 'plan'];
       const noteHelp = el.leader === false
         ? '文字ブロックは本体をドラッグで好きな位置へ動かせます。'
         : '矢印の先端(□)はドラッグで指したい場所へ動かせます。';
-      html += `<div class="prop-row"><span>表示する図面</span><select id="propNoteLayer">${lopts}</select></div>
-        <p class="muted">${noteHelp}</p>`;
+      html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
+      Object.entries(R.LAYERS).forEach(([layer, info]) => {
+        html += `<label class="check-row"><input type="checkbox" data-note-layer="${layer}" ${noteLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${info.label}</label>`;
+      });
+      html += `</div></div><p class="muted">${noteHelp}</p>`;
     }
     if (kind === 'furniture' && el.shape === 'polygon') {
       // 自由な形の備品: 頂点の座標(絶対mm)を1点ずつ編集できる。ドラッグでも修正可
@@ -1665,15 +1669,25 @@
         refresh(); showProps(el);
       });
     });
-    // メモの表示先の図面を変更(変更後の図面に切り替えて見せる)
-    const noteLayerSel = box.querySelector('#propNoteLayer');
-    if (noteLayerSel) {
-      noteLayerSel.onchange = (e) => {
-        el.layer = e.target.value;
-        R.setLayer(el.layer);
-        buildLayerTabs();
-        refresh();
-      };
+    // メモ・コメントの表示先の図面を変更(寸法線と同じく複数選択できる)
+    const noteLayerChecks = Array.from(box.querySelectorAll('[data-note-layer]'));
+    if (noteLayerChecks.length) {
+      noteLayerChecks.forEach((inp) => {
+        inp.onchange = () => {
+          const layers = noteLayerChecks.filter((check) => check.checked).map((check) => check.dataset.noteLayer);
+          if (!layers.length) {
+            inp.checked = true;
+            return;
+          }
+          el.layers = layers;
+          el.layer = layers.length === 1 ? layers[0] : 'custom';
+          if (layers.indexOf(R.getLayer()) < 0) {
+            R.setLayer(layers[0]);
+            buildLayerTabs();
+          }
+          refresh(); showProps(el);
+        };
+      });
     }
     const dimLayerChecks = Array.from(box.querySelectorAll('[data-dim-layer]'));
     if (dimLayerChecks.length) {

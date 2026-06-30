@@ -584,6 +584,7 @@
       ty: 2500,
       leader: leader !== false, // false なら引き出し線なしの自由テキスト
       layer: layer || 'plan',
+      layers: [layer || 'plan'],
     };
     project.notes = project.notes || [];
     project.notes.push(note);
