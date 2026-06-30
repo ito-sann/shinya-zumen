@@ -90,6 +90,23 @@
     return Math.abs(lx) <= el.w / 2 && Math.abs(ly) <= el.h / 2;
   }
 
+  function inSwingDoorSymbol(wx, wy, el) {
+    if (!el || (el.kind !== 'door' && el.kind !== 'doorDouble')) return false;
+    const p = localRotatedPoint(wx, wy, el);
+    const lx = el.flip ? -p.x : p.x;
+    const ly = el.swing ? -p.y : p.y;
+    const w = el.w || 0;
+    const h = el.h || 0;
+    const pad = Math.max(h / 2, 10 / global.Render.view.zoom);
+    const openDepth = el.kind === 'doorDouble' ? w / 2 : w;
+    return lx >= -w / 2 - pad && lx <= w / 2 + pad &&
+      ly >= -openDepth - pad && ly <= h / 2 + pad;
+  }
+
+  function inFittingHitArea(wx, wy, el) {
+    return inRotatedRect(wx, wy, el) || inSwingDoorSymbol(wx, wy, el);
+  }
+
   function inCounterL(wx, wy, el) {
     const p = localRotatedPoint(wx, wy, el);
     const lx = p.x, ly = p.y;
@@ -209,7 +226,7 @@
         const r = Math.max(280, 12 / global.Render.view.zoom);
         if (Math.hypot(wx - el.x, wy - el.y) <= r) return el;
       } else if (item.kind === 'fittings') {
-        if (inRotatedRect(wx, wy, el)) return el;
+        if (inFittingHitArea(wx, wy, el)) return el;
       } else if (item.kind === 'furniture') {
         const hit = el.shape === 'polygon' ? inPolygon(wx, wy, el)
           : el.kind === 'counterL' ? inCounterL(wx, wy, el)
