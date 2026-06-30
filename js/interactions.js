@@ -97,7 +97,8 @@
     const ly = el.swing ? -p.y : p.y;
     const w = el.w || 0;
     const h = el.h || 0;
-    const pad = Math.max(h / 2, 10 / global.Render.view.zoom);
+    // 開き扉は線と弧だけで細く見えるため、選択用の掴み代を広めに取る。
+    const pad = Math.max(320, h * 1.5, 18 / global.Render.view.zoom);
     const openDepth = el.kind === 'doorDouble' ? w / 2 : w;
     return lx >= -w / 2 - pad && lx <= w / 2 + pad &&
       ly >= -openDepth - pad && ly <= h / 2 + pad;
