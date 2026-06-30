@@ -1579,15 +1579,15 @@
     switch (layer) {
       case 'plan':
         return { regionsFill: false, allRegions: true, regionTypes: null,
-                 furniture: true, fittings: true, fixtures: false, dims: true, table: false };
+                 furniture: true, fittings: true, fixtures: false, dims: false, table: false };
       case 'premises':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: true, table: 'all' };
       case 'kyakushitsu':
-        // 全区画を表示して間取りがわかるようにし、客室・調理場だけ寸法を強調する
+        // 全区画を表示して間取りがわかるようにし、客室・調理場だけ強調する
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  highlightTypes: ['kyakushitsu', 'chubo'],
-                 furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: true, dimsAllRegions: true, table: 'kyakuchubo' };
+                 furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: false, dimsAllRegions: true, table: 'kyakuchubo' };
       case 'lighting':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: false, fittings: false, fixtures: true, dims: false, table: 'fixtures' };
@@ -1745,7 +1745,7 @@
       });
       const showRegionDims = el.showDims !== false;
       if (vis.dims && showRegionDims && (vis.dimsAllRegions || isMain(el))) {
-        // 客室・調理場求積図では、通路・トイレ・柱などの長さも確認できるよう全区画に寸法を付ける
+        // 区画の自動辺長は営業所求積図だけに出す。任意の寸法線は別機能として各図面に表示できる。
         drawDimension(ctx, el);
       }
     };
