@@ -16,6 +16,7 @@
     lighting:  { label: '照明・音響設備図' },
     furnviews: { label: '備品姿図' },
   };
+  const DEFAULT_FITTING_LAYERS = ['plan', 'premises'];
   let currentLayer = 'plan';
   let currentSelectedId = null;
   let sheetTableBoxes = new Map();
@@ -24,6 +25,15 @@
 
   function setLayer(name) { if (LAYERS[name]) currentLayer = name; }
   function getLayer() { return currentLayer; }
+
+  function fittingLayers(g) {
+    return Array.isArray(g && g.layers) && g.layers.length ? g.layers : DEFAULT_FITTING_LAYERS;
+  }
+
+  function fittingVisibleOnLayer(g, layer) {
+    if (!g || layer === 'furnviews') return false;
+    return fittingLayers(g).indexOf(layer) >= 0;
+  }
 
   function worldToScreen(x, y) {
     return { x: x * view.zoom + view.offsetX, y: y * view.zoom + view.offsetY };
@@ -1804,7 +1814,7 @@
         if (!visibleRegionIds.has(el.id)) continue;
         drawVisibleRegion(el);
       } else if (item.kind === 'fittings') {
-        if (vis.fittings) drawFitting(ctx, el, { selected: state.selectedId === el.id });
+        if (fittingVisibleOnLayer(el, currentLayer)) drawFitting(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'furniture') {
         if (vis.furniture || (vis.counterFurniture && isCounterFurniture(el))) {
           drawFurniture(ctx, el, { selected: state.selectedId === el.id, num: furnitureNums[el.id] });
@@ -1845,5 +1855,6 @@
     worldToScreen, screenToWorld, fitToView, render,
     paperFrameWorld, getNorthMark, setRedrawCallback, noteBox, noteVisibleOnLayer, furnViewLayout, furnCardAt,
     sheetTableAt, setSheetTableLayout,
+    fittingLayers, fittingVisibleOnLayer,
   };
 })(window);

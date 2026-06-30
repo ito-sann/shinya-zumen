@@ -551,6 +551,7 @@
       w: c.w,
       h: c.h,
       rotation: 0,
+      layers: ['plan', 'premises'],
     };
     project.fittings.push(item);
     return item;

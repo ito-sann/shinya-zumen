@@ -1342,6 +1342,17 @@
         html += `<label class="check-row"><input type="checkbox" data-fieldbool="mirrorL" ${el.mirrorL ? 'checked' : ''}> L字の突起を左右反転</label>`;
       }
       html += propNum('角度(度)', 'rotation', el.rotation || 0);
+      if (kind === 'fittings') {
+        const fittingLayerOptions = ['plan', 'premises', 'kyakushitsu', 'lighting'];
+        const fittingLayers = R.fittingLayers ? R.fittingLayers(el)
+          : (Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'premises']);
+        html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
+        fittingLayerOptions.forEach((layer) => {
+          const label = (R.LAYERS[layer] || {}).label || layer;
+          html += `<label class="check-row"><input type="checkbox" data-fitting-layer="${layer}" ${fittingLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
+        });
+        html += '</div></div>';
+      }
       // 扉・戸は開き勝手(開く方向)を切り替えられる
       if (M.DOOR_KINDS.indexOf(el.kind) >= 0) {
         const slide = el.kind !== 'door' && el.kind !== 'doorDouble';
@@ -1632,6 +1643,24 @@
           }
           el.layers = layers;
           el.layer = 'custom';
+          if (layers.indexOf(R.getLayer()) < 0) {
+            R.setLayer(layers[0]);
+            buildLayerTabs();
+          }
+          refresh(); showProps(el);
+        };
+      });
+    }
+    const fittingLayerChecks = Array.from(box.querySelectorAll('[data-fitting-layer]'));
+    if (fittingLayerChecks.length) {
+      fittingLayerChecks.forEach((inp) => {
+        inp.onchange = () => {
+          const layers = fittingLayerChecks.filter((check) => check.checked).map((check) => check.dataset.fittingLayer);
+          if (!layers.length) {
+            inp.checked = true;
+            return;
+          }
+          el.layers = layers;
           if (layers.indexOf(R.getLayer()) < 0) {
             R.setLayer(layers[0]);
             buildLayerTabs();

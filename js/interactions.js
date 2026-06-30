@@ -203,7 +203,7 @@
       if (layer === 'lighting' && isAreaBoundaryLine(el)) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
-    if (kind === 'fittings') return !!vis.fittings;
+    if (kind === 'fittings') return global.Render.fittingVisibleOnLayer(el, layer);
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
     if (kind === 'fixtures') return !!vis.fixtures;
     if (kind === 'dimensions') return dimVisibleOnLayer(el, layer);
