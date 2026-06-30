@@ -242,6 +242,7 @@
     slideSplit:  { label: '引き分け戸', w: 1800, h: 120 },
     slidePass:   { label: '引き違い戸', w: 1700, h: 120 },
     window:      { label: '窓',         w: 1650, h: 120 },
+    curtain:     { label: 'カーテン',   w: 1800, h: 80 },
     wall:        { label: '壁',         w: 2000, h: 120 },
   };
 
