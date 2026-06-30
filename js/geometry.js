@@ -143,6 +143,7 @@
   }
 
   function isAreaVisibleInTable(region, filterTypes) {
+    if (region && region.boundaryOnly === true) return false;
     const use = areaUseForRegion(region);
     if (use === 'display') return false;
     if (!filterTypes) return true;
@@ -198,16 +199,7 @@
     let totalCalc = 0;
     const codeMap = new Map();
     let codeNo = 0;
-    const premisesBoundaryMode = !filterTypes && hasPremisesAreaBoundary(project);
-    const anyBoundaryMode = !filterTypes && !premisesBoundaryMode && hasAnyAreaBoundary(project);
-    const filteredBoundaryMode = !!filterTypes && hasAnyAreaBoundary(project);
-    const includeRegion = (r) => premisesBoundaryMode
-      ? isPremisesAreaBoundary(r)
-      : anyBoundaryMode
-        ? r.boundaryOnly === true && areaUseForRegion(r) !== 'display'
-      : filteredBoundaryMode
-        ? r.boundaryOnly === true && filterTypes.indexOf(areaUseForRegion(r)) >= 0
-      : isAreaVisibleInTable(r, filterTypes);
+    const includeRegion = (r) => isAreaVisibleInTable(r, filterTypes);
     project.regions.forEach((r) => {
       if (!isPillarRegion(r) && includeRegion(r)) codeMap.set(r.id, code(++codeNo));
     });
@@ -466,14 +458,11 @@
 
   /* 主要な面積サマリー */
   function summary(project) {
-    const explicitPremises = hasPremisesAreaBoundary(project);
     const all = buildTable(project, null);
     const kyaku = buildTable(project, ['kyakushitsu']);
     const chubo = buildTable(project, ['chubo']);
     const toilet = buildTable(project, ['toilet']);
-    const other = buildTable(project, explicitPremises
-      ? ['tsuro', 'soko', 'other']
-      : ['tsuro', 'soko', 'other', 'premises']);
+    const other = buildTable(project, ['tsuro', 'soko', 'other', 'premises']);
     return {
       premises: all.total,   // 営業所面積(全区画合計)
       kyakushitsu: kyaku.total,

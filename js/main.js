@@ -199,7 +199,6 @@
     buildSelects();
     buildLayerTabs();
     bindToolbar();
-    syncBoundaryDefaults();
     bindMeta();
     buildCaseSelect();
     resizeCanvas();
@@ -457,26 +456,6 @@
       });
       draw();
     };
-    $('boundaryAreaUse').onchange = syncBoundaryDefaults;
-    $('btnDrawBoundaryArea').onclick = () => {
-      if (state.draft) {
-        if (state.draftKind !== 'boundaryArea') return; // 他の作図中は面積囲い線ボタンを無効に
-        if (state.draft.points.length >= 3) I.finishPolygon(state);
-        else I.cancelPolygon(state);
-        draw();
-        return;
-      }
-      const use = $('boundaryAreaUse').value;
-      ensureRegionVisible(boundaryRegionType(use));
-      state.draftKind = 'boundaryArea';
-      I.beginPolygon(state, (pts) => {
-        const r = M.addPolygonRegion(project, boundaryRegionType(use), pts);
-        applyBoundaryRegionStyle(r, use);
-        state.selectedId = r.id;
-        refresh(); showProps(r);
-      });
-      draw();
-    };
     // 営業所外周(壁芯)の作図。区画の多角形と同じ操作で外周をなぞる。
     $('btnDrawPremise').onclick = () => {
       if (state.draft) {
@@ -683,15 +662,12 @@
   const HINT_DRAFT = '多角形の作図中: クリックで角を置く / 最初の点をクリック・ダブルクリック・Enterで確定 / Escで中止';
   function setDraftUi(draft) {
     const btnR = $('btnDrawPoly');
-    const btnB = $('btnDrawBoundaryArea');
     const btnP = $('btnDrawPremise');
     const btnF = $('btnDrawFurnPoly');
     btnR.textContent = '多角形で描く';
-    btnB.textContent = '面積囲い線で描く';
     btnP.textContent = '外周を多角形で描く';
     btnF.textContent = '自由な形で描く(真上から)';
     btnR.classList.remove('danger');
-    btnB.classList.remove('danger');
     btnP.classList.remove('danger');
     btnF.classList.remove('danger');
     if (!draft) {
@@ -706,8 +682,7 @@
       return;
     }
     const btn = state.draftKind === 'premise' ? btnP
-      : state.draftKind === 'furniture' ? btnF
-      : state.draftKind === 'boundaryArea' ? btnB : btnR;
+      : state.draftKind === 'furniture' ? btnF : btnR;
     if (draft.points.length >= 3) {
       btn.textContent = '作図を確定';
     } else {
@@ -759,39 +734,6 @@
       R.setLayer('plan');
       buildLayerTabs();
     }
-  }
-
-  const BOUNDARY_AREA_DEFAULTS = {
-    premises: { type: 'premisesArea', label: '営業所囲い', color: '#1d4ed8' },
-    kyakushitsu: { type: 'kyakushitsu', label: '客室囲い', color: '#e53935' },
-    chubo: { type: 'chubo', label: '調理場囲い', color: '#2e7d32' },
-  };
-
-  function boundaryRegionType(use) {
-    return (BOUNDARY_AREA_DEFAULTS[use] || BOUNDARY_AREA_DEFAULTS.kyakushitsu).type;
-  }
-
-  function boundaryColorForUse(use) {
-    return (BOUNDARY_AREA_DEFAULTS[use] || BOUNDARY_AREA_DEFAULTS.kyakushitsu).color;
-  }
-
-  function syncBoundaryDefaults() {
-    const d = BOUNDARY_AREA_DEFAULTS[$('boundaryAreaUse').value] || BOUNDARY_AREA_DEFAULTS.kyakushitsu;
-    $('boundaryLineColor').value = d.color;
-  }
-
-  function applyBoundaryRegionStyle(region, use) {
-    const d = BOUNDARY_AREA_DEFAULTS[use] || BOUNDARY_AREA_DEFAULTS.kyakushitsu;
-    region.boundaryArea = true;
-    region.boundaryOnly = true;
-    region.areaUse = use;
-    region.label = d.label;
-    region.showLabel = false;
-    region.showDims = true;
-    region.showPointLabels = false;
-    region.color = d.color;
-    region.boundaryColor = $('boundaryLineColor').value || d.color;
-    region.boundaryLineStyle = $('boundaryLineStyle').value || 'solid';
   }
 
   function applyRegionTypeDefaults() {
@@ -965,12 +907,7 @@
       push('寸法線', 'dimensions', d, `寸法線 ${i + 1}`, dimLengthLabel(d));
     });
     (project.regions || []).forEach((r) => {
-      if (r.boundaryOnly) {
-        push('面積囲い線', 'regions', r, r.label || '面積囲い線', (M.AREA_USES[G.areaUseForRegion(r)] || {}).label || '');
-      }
-    });
-    (project.regions || []).forEach((r) => {
-      if (!r.boundaryOnly) push('区画', 'regions', r, r.label || (M.REGION_TYPES[r.type] || {}).label || '区画', shapeLabel(r.shape || 'rect'));
+      push('区画', 'regions', r, r.label || (M.REGION_TYPES[r.type] || {}).label || '区画', shapeLabel(r.shape || 'rect'));
     });
     (project.furniture || []).forEach((f) => push('備品', 'furniture', f, f.label || (M.FURNITURE_CATALOG[f.kind] || {}).label || '備品', `${G.fmtM(f.w)}×${G.fmtM(f.h)}m`));
     (project.fittings || []).forEach((g) => push('建具・壁', 'fittings', g, g.label || (M.FITTING_CATALOG[g.kind] || {}).label || '建具', `${G.fmtM(g.w)}m`));
@@ -1106,16 +1043,11 @@
 
   /* 指定の種類に含まれる多角形すべての座標求積表 */
   function coordTablesHtml(filterTypes) {
-    const premiseBoundaryMode = !filterTypes && G.hasPremisesAreaBoundary(project);
-    const anyBoundaryMode = !filterTypes && !premiseBoundaryMode && G.hasAnyAreaBoundary(project);
-    const filteredBoundaryMode = !!filterTypes && G.hasAnyAreaBoundary(project);
     return project.regions
       .filter((r) => r.shape === 'polygon' &&
         !G.isPillarRegion(r) &&
+        r.boundaryOnly !== true &&
         G.areaUseForRegion(r) !== 'display' &&
-        (!premiseBoundaryMode || G.isPremisesAreaBoundary(r)) &&
-        (!anyBoundaryMode || r.boundaryOnly === true) &&
-        (!filteredBoundaryMode || r.boundaryOnly === true) &&
         (!filterTypes || filterTypes.indexOf(G.areaUseForRegion(r)) >= 0))
       .map(coordTableHtml).join('');
   }

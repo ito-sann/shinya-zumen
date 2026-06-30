@@ -74,25 +74,6 @@
         </div>
         <button id="btnDrawPoly" class="btn block">多角形で描く</button>
         <p class="muted">L字や斜め壁など自由な形は、キャンバス上で角をクリックして囲います(面積は座標法で自動計算)。</p>
-        <div class="size-row">
-          <label>面積囲い
-            <select id="boundaryAreaUse">
-              <option value="kyakushitsu">客室面積</option>
-              <option value="chubo">調理場面積</option>
-              <option value="premises">営業所面積</option>
-            </select>
-          </label>
-          <label>線種
-            <select id="boundaryLineStyle">
-              <option value="solid">実線</option>
-              <option value="dotted">点線</option>
-              <option value="dashed">破線</option>
-            </select>
-          </label>
-        </div>
-        <label class="field">線色 <input type="color" id="boundaryLineColor" value="#e53935"></label>
-        <button id="btnDrawBoundaryArea" class="btn block">面積囲い線で描く</button>
-        <p class="muted">閉じた線で囲った範囲を、そのまま客室・調理場・営業所の面積として計算します。普通の区画と重ねると二重計上になるため、面積の根拠にする範囲だけ囲ってください。</p>
       </section>
 
       <section class="group" data-layers="plan premises">
@@ -257,7 +238,6 @@
         <select id="selectFilter">
           <option value="all" selected>すべて</option>
           <option value="dimensions">寸法線だけ</option>
-          <option value="boundary">面積囲い線だけ</option>
           <option value="regions">区画だけ</option>
           <option value="furniture">備品だけ</option>
           <option value="fittings">建具・壁だけ</option>

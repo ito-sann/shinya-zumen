@@ -40,6 +40,7 @@
   function coordTablesHtml(project, filterTypes) {
     const polys = project.regions.filter((r) => r.shape === 'polygon' &&
       !global.Geometry.isPillarRegion(r) &&
+      r.boundaryOnly !== true &&
       global.Geometry.areaUseForRegion(r) !== 'display' &&
       (!filterTypes || filterTypes.indexOf(global.Geometry.areaUseForRegion(r)) >= 0));
     return polys.map((r) => {
