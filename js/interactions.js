@@ -160,7 +160,7 @@
       return dim.layers.indexOf(layer) >= 0;
     }
     const l = dim.layer || 'drawings';
-    const drawingLayers = ['plan', 'premises', 'kyakushitsu'];
+    const drawingLayers = ['plan', 'kyuseki'];
     if (l === 'drawings') return drawingLayers.indexOf(layer) >= 0;
     if (drawingLayers.indexOf(l) >= 0) return drawingLayers.indexOf(layer) >= 0; // 旧データ互換
     return l === layer;
@@ -658,7 +658,7 @@
             id: state.selectedId,
             kind: 'sheetTable',
             layer,
-            label: ({ premises: '営業所求積図の表', kyakushitsu: '客室・調理場求積図の表', lighting: '照明・音響設備一覧表' })[layer] || '図面上の表',
+            label: ({ kyuseki: '求積図の表', lighting: '照明・音響設備一覧表' })[layer] || '図面上の表',
             x: cur.x + dx * step,
             y: cur.y + dy * step,
             scale: cur.scale || 0.8,

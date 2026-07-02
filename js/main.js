@@ -466,7 +466,7 @@
         return;
       }
       if (project.premise && !confirm('営業所外周はすでにあります。描き直しますか?')) return;
-      if (R.getLayer() !== 'plan' && R.getLayer() !== 'premises') {
+      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') {
         R.setLayer('plan');
         buildLayerTabs();
       }
@@ -1097,29 +1097,26 @@
     // 見出しもページに合わせる(照明音響図=設備一覧表 / 備品姿図=備品一覧表)
     $('kyusekiHead').textContent =
       layer === 'lighting' ? '設備一覧表' : (layer === 'furnviews' ? '備品一覧表' : '求積表');
-    // 「計算過程を図面に載せる」ボタンは求積図(営業所/客室・調理場)でだけ出す
-    $('kyusekiToggleRow').style.display =
-      (layer === 'premises' || layer === 'kyakushitsu') ? '' : 'none';
+    // 「計算過程を図面に載せる」ボタンは求積図でだけ出す
+    $('kyusekiToggleRow').style.display = layer === 'kyuseki' ? '' : 'none';
     let html;
-    if (layer === 'kyakushitsu') {
-      // 客室・調理場求積図: 客室と調理場の求積表を別々に出す
-      html = kyusekiTableHtml('客室求積表', G.buildTable(project, ['kyakushitsu'])) +
-             kyusekiTableHtml('調理場求積表', G.buildTable(project, ['chubo'])) +
-             coordTablesHtml(['kyakushitsu', 'chubo']);
-    } else if (layer === 'lighting') {
+    if (layer === 'lighting') {
       html = fixtureTableHtml();
     } else if (layer === 'furnviews') {
       html = furnTableHtml();
     } else {
-      // 営業所求積: 方式(区画合計/壁芯/両方)に応じて出し分ける
+      // 平面図・求積図: 営業所(方式に応じて内法/壁芯)・客室・調理場の求積表をまとめて出す
       const method = project.meta.premisesMethod || 'regions';
       const parts = [];
       if (method !== 'regions') parts.push(premiseKyusekiHtml());
       if (method !== 'centerline') {
         parts.push(kyusekiTableHtml(
           method === 'both' ? '営業所求積表(内法・区画合計)' : '営業所求積表',
-          G.buildTable(project, null)) + coordTablesHtml(null));
+          G.buildTable(project, null)));
       }
+      parts.push(kyusekiTableHtml('客室求積表', G.buildTable(project, ['kyakushitsu'])));
+      parts.push(kyusekiTableHtml('調理場求積表', G.buildTable(project, ['chubo'])));
+      parts.push(coordTablesHtml(null));
       html = parts.join('');
     }
     $('kyusekiBox').innerHTML = html;
@@ -1289,11 +1286,10 @@
       const lenM = G.mmToM(Math.hypot(el.x2 - el.x1, el.y2 - el.y1));
       const dimLayers = Array.isArray(el.layers) && el.layers.length
         ? el.layers
-        : ['plan', 'premises', 'kyakushitsu'];
+        : ['plan', 'kyuseki'];
       const dimLayerOptions = [
         ['plan', '平面図'],
-        ['premises', '営業所求積図'],
-        ['kyakushitsu', '客室・調理場求積図'],
+        ['kyuseki', '求積図'],
         ['lighting', '照明・音響設備図'],
       ];
       html += `<div class="prop-row"><span>長さ</span><b id="propDimLen">${lenM.toFixed(2)} m</b></div>`;
@@ -1343,9 +1339,9 @@
       }
       html += propNum('角度(度)', 'rotation', el.rotation || 0);
       if (kind === 'fittings') {
-        const fittingLayerOptions = ['plan', 'premises', 'kyakushitsu', 'lighting'];
+        const fittingLayerOptions = ['plan', 'kyuseki', 'lighting'];
         const fittingLayers = R.fittingLayers ? R.fittingLayers(el)
-          : (Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'premises']);
+          : (Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'kyuseki']);
         html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
         fittingLayerOptions.forEach((layer) => {
           const label = (R.LAYERS[layer] || {}).label || layer;

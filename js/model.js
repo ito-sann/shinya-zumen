@@ -285,8 +285,7 @@
     { id: 'houhou',    label: '営業の方法(様式第48号)' },
     { id: 'annaizu',   label: '営業所周辺の略図(案内図)', note: '住宅地図の写し等。本ツール対象外' },
     { id: 'heimenzu',  label: '営業所平面図' },
-    { id: 'kyuseki_e', label: '営業所求積図・求積表' },
-    { id: 'kyuseki_k', label: '客室・調理場求積図・求積表' },
+    { id: 'kyuseki',   label: '求積図・求積表(営業所・客室・調理場)' },
     { id: 'shomei',    label: '照明・音響設備図(設備一覧表つき)' },
     { id: 'juminhyo',  label: '住民票の写し(本籍記載・マイナンバーなし)' },
     { id: 'teikan',    label: '定款の写し', corpOnly: true },
@@ -551,7 +550,7 @@
       w: c.w,
       h: c.h,
       rotation: 0,
-      layers: ['plan', 'premises'],
+      layers: ['plan', 'kyuseki'],
     };
     project.fittings.push(item);
     return item;
@@ -754,6 +753,27 @@
     project.meta.todokede = Object.assign({}, base.meta.todokede, (obj.meta && obj.meta.todokede) || {});
     project.checklist = Object.assign({ corp: false, items: {} }, obj.checklist || {});
     project.checklist.items = (obj.checklist && obj.checklist.items) || {};
+    // 旧版からの引っ越し: 営業所求積図と客室・調理場求積図は「求積図」1枚に統合した。
+    // メモ・寸法線・建具の表示先、図面上の表の位置、チェックリストの2項目を付け替える。
+    const mapLayer = (l) => (l === 'premises' || l === 'kyakushitsu') ? 'kyuseki' : l;
+    for (const el of project.notes.concat(project.dimensions, project.fittings)) {
+      if (el.layer) el.layer = mapLayer(el.layer);
+      if (Array.isArray(el.layers)) {
+        el.layers = el.layers.map(mapLayer).filter((l, i, a) => a.indexOf(l) === i);
+      }
+    }
+    const stl = project.meta.sheetTableLayouts || {};
+    if (!stl.kyuseki && (stl.premises || stl.kyakushitsu)) {
+      stl.kyuseki = stl.premises || stl.kyakushitsu;
+    }
+    delete stl.premises;
+    delete stl.kyakushitsu;
+    const items = project.checklist.items;
+    if (('kyuseki_e' in items || 'kyuseki_k' in items) && !('kyuseki' in items)) {
+      items.kyuseki = !!(items.kyuseki_e && items.kyuseki_k);
+    }
+    delete items.kyuseki_e;
+    delete items.kyuseki_k;
     if (typeof project._seq !== 'number') {
       project._seq = 1 + project.regions.length + project.furniture.length +
                      project.fittings.length + project.fixtures.length;

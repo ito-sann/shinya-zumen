@@ -11,12 +11,11 @@
   /* レイヤー(図面の種類)。届出に添付する図面の単位と一致させている。 */
   const LAYERS = {
     plan:      { label: '平面図' },
-    premises:  { label: '営業所求積図' },
-    kyakushitsu: { label: '客室・調理場求積図' },
+    kyuseki:   { label: '求積図' },
     lighting:  { label: '照明・音響設備図' },
     furnviews: { label: '備品姿図' },
   };
-  const DEFAULT_FITTING_LAYERS = ['plan', 'premises'];
+  const DEFAULT_FITTING_LAYERS = ['plan', 'kyuseki'];
   let currentLayer = 'plan';
   let currentSelectedId = null;
   let sheetTableBoxes = new Map();
@@ -725,12 +724,13 @@
     drawCornerTables(ctx, canvas, project, table ? [table] : [], note ? note.split('\n') : [], 'lighting');
   }
 
-  /* 図面そのものに重ねる求積表のデータを組み立てる。
-   * premises=営業所求積表 / kyakushitsu=客室・調理場求積表。
+  /* 図面そのものに重ねる求積表のデータを組み立てる(求積図のみ)。
+   * 営業所(方式に応じて内法/壁芯)・客室・調理場の求積表をまとめて載せる。
    * 行は { code, label, expr(計算式), area } を持つ。 */
   function kyusekiSheetTables(project, layer) {
     const G = global.Geometry;
     const tables = [];
+    if (layer !== 'kyuseki') return tables;
     const regionTable = (title, t) => ({
       title,
       cols: ['符号', '区画', '計算式', '面積(㎡)'],
@@ -741,30 +741,27 @@
       ]),
       foot: ['合計', '', '', t.total.toFixed(2) + ' ㎡'],
     });
-    if (layer === 'kyakushitsu') {
-      tables.push(regionTable('客室求積表', G.buildTable(project, ['kyakushitsu'])));
-      tables.push(regionTable('調理場求積表', G.buildTable(project, ['chubo'])));
-    } else if (layer === 'premises') {
-      const method = project.meta.premisesMethod || 'regions';
-      if (method !== 'centerline') {
-        tables.push(regionTable(
-          method === 'both' ? '営業所求積表(内法・区画合計)' : '営業所求積表',
-          G.buildTable(project, null)));
-      }
-      // 壁芯(座標法)の方式では座標求積表を載せる
-      if (method !== 'regions' && project.premise) {
-        const c = G.premiseCalc(project.premise);
-        tables.push({
-          title: '営業所求積表(壁芯・座標法)',
-          cols: ['点', 'X(m)', 'Y(m)', 'Y次−Y前', 'X×(Y次−Y前)'],
-          align: ['center', 'right', 'right', 'right', 'right'],
-          rows: c.rows.map((r) => [
-            'P' + r.no, r.x.toFixed(2), r.y.toFixed(2), r.dy.toFixed(2), r.prod.toFixed(4),
-          ]),
-          foot: ['倍面積', '', '', c.doubleArea.toFixed(4), c.total.toFixed(2) + ' ㎡'],
-        });
-      }
+    const method = project.meta.premisesMethod || 'regions';
+    if (method !== 'centerline') {
+      tables.push(regionTable(
+        method === 'both' ? '営業所求積表(内法・区画合計)' : '営業所求積表',
+        G.buildTable(project, null)));
     }
+    // 壁芯(座標法)の方式では座標求積表を載せる
+    if (method !== 'regions' && project.premise) {
+      const c = G.premiseCalc(project.premise);
+      tables.push({
+        title: '営業所求積表(壁芯・座標法)',
+        cols: ['点', 'X(m)', 'Y(m)', 'Y次−Y前', 'X×(Y次−Y前)'],
+        align: ['center', 'right', 'right', 'right', 'right'],
+        rows: c.rows.map((r) => [
+          'P' + r.no, r.x.toFixed(2), r.y.toFixed(2), r.dy.toFixed(2), r.prod.toFixed(4),
+        ]),
+        foot: ['倍面積', '', '', c.doubleArea.toFixed(4), c.total.toFixed(2) + ' ㎡'],
+      });
+    }
+    tables.push(regionTable('客室求積表', G.buildTable(project, ['kyakushitsu'])));
+    tables.push(regionTable('調理場求積表', G.buildTable(project, ['chubo'])));
     return tables;
   }
 
@@ -835,8 +832,7 @@
 
   function sheetTableLabel(layer) {
     return {
-      premises: '営業所求積図の表',
-      kyakushitsu: '客室・調理場求積図の表',
+      kyuseki: '求積図の表',
       lighting: '照明・音響設備一覧表',
     }[layer] || '図面上の表';
   }
@@ -1168,7 +1164,7 @@
     ctx.restore();
   }
 
-  /* 営業所求積図: 壁芯線(実線)と辺長・頂点番号を描く。
+  /* 求積図: 壁芯線(実線)と辺長・頂点番号を描く。
    * 頂点番号(P1, P2 …)は壁芯の座標求積表と対応する。 */
   function drawPremiseCenterline(ctx, project) {
     const pr = project.premise;
@@ -1595,7 +1591,7 @@
       return dim.layers.indexOf(layer) >= 0;
     }
     const l = dim.layer || 'drawings';
-    const drawingLayers = ['plan', 'premises', 'kyakushitsu'];
+    const drawingLayers = ['plan', 'kyuseki'];
     if (l === 'drawings') return drawingLayers.indexOf(layer) >= 0;
     if (drawingLayers.indexOf(l) >= 0) return drawingLayers.indexOf(layer) >= 0; // 旧データ互換
     return l === layer;
@@ -1631,14 +1627,10 @@
       case 'plan':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: true, fittings: true, fixtures: false, dims: false, table: false };
-      case 'premises':
+      case 'kyuseki':
+        // 求積図: 全区画を表示し、営業所(壁芯線)・客室・調理場の求積をまとめて示す
         return { regionsFill: false, allRegions: true, regionTypes: null,
-                 furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: true, table: 'all' };
-      case 'kyakushitsu':
-        // 全区画を表示して間取りがわかるようにし、客室・調理場だけ強調する
-        return { regionsFill: false, allRegions: true, regionTypes: null,
-                 highlightTypes: ['kyakushitsu', 'chubo'],
-                 furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: false, dimsAllRegions: true, table: 'kyakuchubo' };
+                 furniture: false, counterFurniture: true, fittings: false, fixtures: false, dims: true, table: 'kyuseki' };
       case 'lighting':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: false, fittings: false, fixtures: true, dims: false, table: 'fixtures' };
@@ -1655,7 +1647,7 @@
   /* 求積図の線色(色分けモード時)。営業所=青・客室=赤・調理場=緑の慣行色。 */
   function strokeFor(r, project) {
     if (project.meta.colorMode !== 'police') return null;
-    if (currentLayer === 'kyakushitsu') {
+    if (currentLayer === 'kyuseki') {
       const use = global.Geometry.areaUseForRegion(r);
       if (use === 'kyakushitsu') return '#e53935';
       if (use === 'chubo') return '#2e7d32';
@@ -1710,9 +1702,10 @@
 
   function drawBoundaryLines(ctx, project) {
     if (!project.meta || project.meta.colorMode !== 'police') return;
-    if (['plan', 'premises', 'kyakushitsu'].indexOf(currentLayer) < 0) return;
+    if (['plan', 'kyuseki'].indexOf(currentLayer) < 0) return;
     const styles = boundaryLineStyles(project);
-    if (currentLayer !== 'premises' && project.premise) {
+    // 求積図では壁芯線そのものを描くので、囲い線の重ね描きは平面図だけにする
+    if (currentLayer !== 'kyuseki' && project.premise) {
       strokeOutline(ctx, regionOutlinePoints(global.Geometry.premiseRegionLike(project.premise)), '#1d4ed8', styles.premises);
     }
     for (const r of project.regions || []) {
@@ -1757,10 +1750,10 @@
       drawUnderlay(ctx, project);
     }
 
-    // 営業所外周(壁)。平面図・営業所求積図でははっきり、その他では薄く描く
+    // 営業所外周(壁)。平面図・求積図でははっきり、その他では薄く描く
     if (project.premise) {
       drawPremiseWalls(ctx, project, {
-        muted: currentLayer !== 'plan' && currentLayer !== 'premises',
+        muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki',
         selected: state.selectedId === 'premise',
       });
     }
@@ -1796,7 +1789,7 @@
       });
       const showRegionDims = el.showDims !== false;
       if (vis.dims && showRegionDims && (vis.dimsAllRegions || isMain(el))) {
-        // 区画の自動辺長は営業所求積図だけに出す。任意の寸法線は別機能として各図面に表示できる。
+        // 区画の自動辺長は求積図だけに出す。任意の寸法線は別機能として各図面に表示できる。
         drawDimension(ctx, el);
       }
     };
@@ -1828,14 +1821,13 @@
       }
     }
     if (vis.fixtures) drawFixtureLegend(ctx, canvas, project);
-    // 営業所求積図では壁芯線(求積の根拠になる線)を最前面側に描く
-    if (currentLayer === 'premises' && project.premise) {
+    // 求積図では壁芯線(営業所求積の根拠になる線)を最前面側に描く
+    if (currentLayer === 'kyuseki' && project.premise) {
       drawPremiseCenterline(ctx, project);
     }
     drawBoundaryLines(ctx, project);
     // 求積表(計算過程)を図面そのものに重ねる(求積図のみ・設定で切替)
-    if ((currentLayer === 'premises' || currentLayer === 'kyakushitsu') &&
-        project.meta.showKyusekiTable !== false) {
+    if (currentLayer === 'kyuseki' && project.meta.showKyusekiTable !== false) {
       drawKyusekiTable(ctx, canvas, project);
     }
     // 手動の寸法線・メモは上の重なり順に含めて描く

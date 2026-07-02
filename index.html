@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.48.10">
+  <link rel="stylesheet" href="css/style.css?v=1.49.0">
 </head>
 <body>
   <header class="topbar">
@@ -50,7 +50,7 @@
         <p class="muted">案件ごとにブラウザ内へ自動保存されます。案件名は店舗名から自動でつきます。パソコンの買い替えに備えて、ときどき「全案件をバックアップ」でファイルに書き出してください。</p>
       </section>
 
-      <section class="group" data-layers="plan premises kyakushitsu">
+      <section class="group" data-layers="plan kyuseki">
         <h3>区画を追加</h3>
         <div class="add-row">
           <select id="regionType"></select>
@@ -76,7 +76,7 @@
         <p class="muted">L字や斜め壁など自由な形は、キャンバス上で角をクリックして囲います(面積は座標法で自動計算)。</p>
       </section>
 
-      <section class="group" data-layers="plan premises">
+      <section class="group" data-layers="plan kyuseki">
         <h3>営業所外周(壁芯)</h3>
         <button id="btnDrawPremise" class="btn block">外周を多角形で描く</button>
         <button id="btnPremAuto" class="btn block">区画に合わせて自動作成</button>
@@ -96,7 +96,7 @@
             <option value="both">両方を併記</option>
           </select>
         </label>
-        <p class="muted">営業所求積図を壁芯で求める警察署向け。「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます。方式は署のローカルルールに合わせて選べます。</p>
+        <p class="muted">営業所の求積を壁芯で求める警察署向け。「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます。方式は署のローカルルールに合わせて選べます。</p>
       </section>
 
       <section class="group" data-layers="plan">
@@ -132,7 +132,7 @@
         <p class="muted">備品姿図では、各備品の図をドラッグで好きな位置へ動かせます(用紙からはみ出すときの整理用)。バラバラになったら、このボタンで元の自動整列に戻せます。</p>
       </section>
 
-      <section class="group" data-layers="plan premises kyakushitsu">
+      <section class="group" data-layers="plan kyuseki">
         <h3>建具を追加</h3>
         <div class="add-row">
           <select id="fittingKind"></select>
@@ -154,7 +154,7 @@
         <p class="muted">記号と台数の凡例は図面右下に自動表示されます。</p>
       </section>
 
-      <section class="group" data-layers="plan premises kyakushitsu">
+      <section class="group" data-layers="plan kyuseki">
         <h3>寸法を記入</h3>
         <button id="btnAddDim" class="btn block">寸法を記入</button>
         <p class="muted">壁から客室までの距離や出入口の幅など、好きな2点間の長さ(m)を図面に書き込めます。ボタンを押して1点目→2点目をクリック。両端の□はドラッグで動かせます。</p>
@@ -262,7 +262,7 @@
 
     <!-- 右:プロパティ・面積・注意 -->
     <aside class="panel right">
-      <section class="group" data-layers="plan premises kyakushitsu">
+      <section class="group" data-layers="plan kyuseki">
         <h3>面積サマリー</h3>
         <table class="summary" id="summaryTable"></table>
       </section>
@@ -318,13 +318,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.48.10"></script>
-  <script src="js/geometry.js?v=1.48.10"></script>
-  <script src="js/render.js?v=1.48.10"></script>
-  <script src="js/interactions.js?v=1.48.10"></script>
-  <script src="js/print.js?v=1.48.10"></script>
-  <script src="js/forms.js?v=1.48.10"></script>
-  <script src="js/main.js?v=1.48.10"></script>
+  <script src="js/model.js?v=1.49.0"></script>
+  <script src="js/geometry.js?v=1.49.0"></script>
+  <script src="js/render.js?v=1.49.0"></script>
+  <script src="js/interactions.js?v=1.49.0"></script>
+  <script src="js/print.js?v=1.49.0"></script>
+  <script src="js/forms.js?v=1.49.0"></script>
+  <script src="js/main.js?v=1.49.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

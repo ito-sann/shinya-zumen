@@ -104,22 +104,20 @@
   /* レイヤーに応じた添付表のHTML */
   function tablesForLayer(project, layer) {
     const vis = global.Render.visibility(layer);
-    if (vis.table === 'all') {
-      // 営業所求積: 方式(区画合計/壁芯/両方)に応じて出し分ける
+    if (vis.table === 'kyuseki') {
+      // 求積図: 営業所(方式に応じて内法/壁芯)・客室・調理場の求積表をまとめて添付する
       const method = project.meta.premisesMethod || 'regions';
       const parts = [];
       if (method !== 'regions') parts.push(premiseTableHtml(project));
       if (method !== 'centerline') {
         parts.push(tableHtml(
           method === 'both' ? '営業所求積表(内法・区画合計)' : '営業所求積表',
-          global.Geometry.buildTable(project, null)) + coordTablesHtml(project, null));
+          global.Geometry.buildTable(project, null)));
       }
+      parts.push(tableHtml('客室求積表', global.Geometry.buildTable(project, ['kyakushitsu'])));
+      parts.push(tableHtml('調理場求積表', global.Geometry.buildTable(project, ['chubo'])));
+      parts.push(coordTablesHtml(project, null));
       return parts.join('');
-    }
-    if (vis.table === 'kyakuchubo') {
-      return tableHtml('客室求積表', global.Geometry.buildTable(project, ['kyakushitsu'])) +
-             tableHtml('調理場求積表', global.Geometry.buildTable(project, ['chubo'])) +
-             coordTablesHtml(project, ['kyakushitsu', 'chubo']);
     }
     if (vis.table === 'fixtures') {
       return fixtureTableHtml(project);
@@ -231,7 +229,7 @@
   }
 
   function frameScaleBarHtml(project, layer) {
-    if (['plan', 'premises', 'kyakushitsu'].indexOf(layer) < 0) return '';
+    if (['plan', 'kyuseki'].indexOf(layer) < 0) return '';
     const scale = project.meta.scale || 50;
     const mm = (worldMm) => (worldMm / scale).toFixed(2);
     return `<svg class="frame-scale-bar" style="width:${mm(1000)}mm;height:${mm(840)}mm;right:${mm(280)}mm;bottom:${mm(200)}mm"
@@ -389,7 +387,7 @@ ${bodyHtml}
     openWindow(project, title, frameSheetHtml(project, layer, img));
   }
 
-  /* 届出に必要な全図面(平面図・営業所求積図・客室・調理場求積図・照明音響設備図)を
+  /* 届出に必要な全図面(平面図・求積図・照明音響設備図・備品姿図)を
    * 1ファイルにまとめて出力する。1レイヤー = 1ページ。 */
   function printAll(project) {
     const layers = Object.keys(global.Render.LAYERS);
