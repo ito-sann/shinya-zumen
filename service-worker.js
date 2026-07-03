@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shinya-zumen-v1.49.0';
+const CACHE_NAME = 'shinya-zumen-v1.50.0';
 const APP_SHELL = [
   './',
   './index.html',

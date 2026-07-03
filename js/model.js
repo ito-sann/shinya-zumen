@@ -327,7 +327,7 @@
         /* 図面上に重ねる表(求積表・設備一覧表)の手動配置。
          * layer → {x, y, scale}。x/y は表の左上(mm)、scale は自動サイズに対する倍率。 */
         sheetTableLayouts: {},
-        fontScale: 100,       // 図面内ラベルの文字サイズ(%)。要素ごとの fontMm が優先
+        fontScale: 100,       // 図面内ラベルの文字サイズ(%)。要素ごとの fontSize(サイズ番号)が優先
         /* 営業所求積の方式(警察署のローカルルールに合わせて選ぶ):
          *   'regions'    … 区画の合計(内法)
          *   'centerline' … 壁芯の外周(座標法)
@@ -774,6 +774,21 @@
     }
     delete items.kyuseki_e;
     delete items.kyuseki_k;
+    // 旧形式の文字サイズ(fontMm=実寸mm)を、現行のサイズ番号(fontSize, 15=標準)へ変換する。
+    // 既定の実寸は要素の種類ごとに異なる(render.js の既定値と揃える)。
+    const convertFontMm = (list, defaultMm) => {
+      for (const el of list || []) {
+        if (el.fontMm > 0 && !(el.fontSize > 0)) {
+          el.fontSize = Math.min(96, Math.max(6, Math.round(el.fontMm / defaultMm * 15)));
+        }
+        delete el.fontMm;
+      }
+    };
+    convertFontMm(project.regions, 320);
+    convertFontMm(project.furniture, 200);
+    convertFontMm(project.fittings, 200);
+    convertFontMm(project.notes, 240);
+    convertFontMm(project.dimensions, 240);
     if (typeof project._seq !== 'number') {
       project._seq = 1 + project.regions.length + project.furniture.length +
                      project.fittings.length + project.fixtures.length;

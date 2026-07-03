@@ -50,10 +50,9 @@
   /* ラベル文字のサイズ(px)を求める。
    *   defaultMm … 既定の実寸(mm)
    *   el        … 要素。el.fontSize(サイズ番号: 15=標準)が指定されていれば
-   *               全体設定より優先する。旧形式の el.fontMm(実寸mm)も互換で残す。 */
+   *               全体設定より優先する。 */
   function fontPx(defaultMm, el) {
     if (el && el.fontSize > 0) return wpx(defaultMm * el.fontSize / 15);
-    if (el && el.fontMm > 0) return wpx(el.fontMm); // 旧データ互換
     return wpx(defaultMm * fontScale);
   }
   function screenToWorld(px, py) {

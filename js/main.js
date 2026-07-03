@@ -18,7 +18,6 @@
    * 「案件」欄で切り替えられる。ファイルの「保存」ボタンとは別物。 */
   const CASES_KEY = 'shinya-zumen-cases';     // 案件の一覧(id・名前・更新日時)
   const CURRENT_KEY = 'shinya-zumen-current'; // 最後に開いていた案件のid
-  const LEGACY_KEY = 'shinya-zumen-autosave'; // 旧版(1案件のみ)の控え
   const caseKey = (id) => `shinya-zumen-case-${id}`;
   let currentCaseId = null;
   let autosaveTimer = null;
@@ -58,22 +57,6 @@
       const text = localStorage.getItem(caseKey(id));
       return text ? M.deserialize(text) : null;
     } catch (e) { return null; } // 壊れた控えは無視する
-  }
-  /* 旧版(案件1つだけの自動保存)の控えを、案件形式に引っ越す */
-  function migrateLegacy() {
-    try {
-      const text = localStorage.getItem(LEGACY_KEY);
-      if (!text) return;
-      const id = newCaseId();
-      localStorage.setItem(caseKey(id), text);
-      let name = '前回の図面';
-      try { name = (JSON.parse(text).meta || {}).storeName || name; } catch (e) { /* 既定名のまま */ }
-      const list = readCases();
-      list.push({ id, name, updatedAt: Date.now() });
-      writeCases(list);
-      localStorage.setItem(CURRENT_KEY, id);
-      localStorage.removeItem(LEGACY_KEY);
-    } catch (e) { /* 引っ越せなければ何もしない */ }
   }
   /* 案件セレクトの中身を作り直す(更新が新しい順) */
   function buildCaseSelect() {
@@ -181,7 +164,6 @@
 
   /* ---- 初期化 ---- */
   function init() {
-    migrateLegacy();
     // 前回の続き(自動保存)があれば、最後に開いていた案件を復元する
     let saved = null;
     const cases = readCases();
@@ -358,7 +340,7 @@
       if (e.target.id === 'todokedeModal') $('todokedeModal').hidden = true;
     };
 
-    // メモ・引き出し線(いま開いている図面に追加)
+    // メモ(いま開いている図面に追加)。矢印の有無は「選択中の要素」で切り替える
     $('btnAddNote').onclick = () => {
       const n = M.addNote(project, R.getLayer());
       const c = canvasCss();
@@ -368,18 +350,6 @@
       n.y = I.snap(center.y - 600 + d);
       n.tx = I.snap(n.x - 1500);
       n.ty = I.snap(n.y + 1500);
-      state.selectedId = n.id;
-      refresh();
-      showProps(n);
-    };
-    // コメント(引き出し線なしの自由テキスト。ドラッグで自由に動かせる)
-    $('btnAddComment').onclick = () => {
-      const n = M.addNote(project, R.getLayer(), false);
-      const c = canvasCss();
-      const center = R.screenToWorld(c.width / 2, c.height / 2);
-      const d = cascade();
-      n.x = I.snap(center.x + d);
-      n.y = I.snap(center.y - 600 + d);
       state.selectedId = n.id;
       refresh();
       showProps(n);
@@ -912,7 +882,7 @@
     (project.furniture || []).forEach((f) => push('備品', 'furniture', f, f.label || (M.FURNITURE_CATALOG[f.kind] || {}).label || '備品', `${G.fmtM(f.w)}×${G.fmtM(f.h)}m`));
     (project.fittings || []).forEach((g) => push('建具・壁', 'fittings', g, g.label || (M.FITTING_CATALOG[g.kind] || {}).label || '建具', `${G.fmtM(g.w)}m`));
     (project.fixtures || []).forEach((x) => push('照明・音響', 'fixtures', x, (M.FIXTURE_CATALOG[x.kind] || {}).label || '設備', (M.FIXTURE_CATALOG[x.kind] || {}).symbol || ''));
-    (project.notes || []).forEach((n) => push('メモ', 'notes', n, n.leader === false ? 'コメント' : 'メモ', (n.text || '').split('\n')[0] || ''));
+    (project.notes || []).forEach((n) => push('メモ', 'notes', n, 'メモ' + (n.leader === false ? '(矢印なし)' : ''), (n.text || '').split('\n')[0] || ''));
     return rows;
   }
 
@@ -1269,9 +1239,7 @@
     // ラベルを持つ要素は文字サイズを個別に調整できる。
     // Googleドキュメント風のサイズ番号(15=標準)で、−/＋は段階リストを移動する。
     if (kind === 'regions' || kind === 'furniture' || kind === 'fittings' || kind === 'notes' || kind === 'dimensions') {
-      const dMm = kind === 'regions' ? 320 : (kind === 'furniture' || kind === 'fittings' ? 200 : 240); // render.js の既定値と揃える
-      const curSize = el.fontSize > 0 ? el.fontSize
-        : (el.fontMm > 0 ? Math.round(el.fontMm / dMm * 15) : 15);
+      const curSize = el.fontSize > 0 ? el.fontSize : 15;
       html += `<div class="prop-row"><span>文字サイズ</span>
         <span class="font-ctrl">
           <button type="button" id="fontMinus" class="btn small">−</button>
@@ -1306,13 +1274,15 @@
       html += propNum('Y位置(mm)', 'y', el.y);
     }
     if (kind === 'notes') {
-      // どの図面に表示するかをあとから複数選べる(矢印の先端はドラッグで移動)
-      const noteLayers = Array.isArray(el.layers) && el.layers.length
-        ? el.layers
-        : [el.layer || 'plan'];
+      // 矢印(引き出し線)の有無を切り替えられる
       const noteHelp = el.leader === false
         ? '文字ブロックは本体をドラッグで好きな位置へ動かせます。'
         : '矢印の先端(□)はドラッグで指したい場所へ動かせます。';
+      html += `<label class="check-row"><input type="checkbox" id="noteLeader" ${el.leader !== false ? 'checked' : ''}> 矢印(引き出し線)を付ける</label>`;
+      // どの図面に表示するかをあとから複数選べる
+      const noteLayers = Array.isArray(el.layers) && el.layers.length
+        ? el.layers
+        : [el.layer || 'plan'];
       html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
       Object.entries(R.LAYERS).forEach(([layer, info]) => {
         html += `<label class="check-row"><input type="checkbox" data-note-layer="${layer}" ${noteLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${info.label}</label>`;
@@ -1501,12 +1471,9 @@
     const fontInput = box.querySelector('#fontInput');
     if (fontInput) {
       const STEPS = [8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
-      const defaultMm = kind === 'regions' ? 320 : 200; // render.js の既定値と揃える
-      const current = () => (el.fontSize > 0 ? el.fontSize
-        : (el.fontMm > 0 ? Math.round(el.fontMm / defaultMm * 15) : 15));
+      const current = () => (el.fontSize > 0 ? el.fontSize : 15);
       const apply = (s) => {
         el.fontSize = Math.min(96, Math.max(6, Math.round(s)));
-        el.fontMm = 0; // 旧形式の指定は新形式へ置き換える
         fontInput.value = el.fontSize;
         refresh();
       };
@@ -1526,7 +1493,6 @@
         const v = parseFloat(e.target.value);
         if (v > 0) {
           el.fontSize = Math.min(96, Math.max(6, Math.round(v)));
-          el.fontMm = 0;
           refresh();
         }
       });
@@ -1608,7 +1574,19 @@
         refresh(); showProps(el);
       });
     });
-    // メモ・コメントの表示先の図面を変更(寸法線と同じく複数選択できる)
+    // メモの矢印(引き出し線)の有無を切り替える。付け直すときは先端を本体の近くに戻す
+    const noteLeader = box.querySelector('#noteLeader');
+    if (noteLeader) {
+      noteLeader.onchange = (e) => {
+        el.leader = e.target.checked;
+        if (el.leader) {
+          el.tx = el.x - 1500;
+          el.ty = el.y + 1500;
+        }
+        refresh(); showProps(el);
+      };
+    }
+    // メモの表示先の図面を変更(寸法線と同じく複数選択できる)
     const noteLayerChecks = Array.from(box.querySelectorAll('[data-note-layer]'));
     if (noteLayerChecks.length) {
       noteLayerChecks.forEach((inp) => {
@@ -1701,7 +1679,7 @@
     if (kind === 'furniture') return '備品';
     if (kind === 'fittings') return '建具・設備';
     if (kind === 'fixtures') return '照明・音響設備';
-    if (kind === 'notes') return el.leader === false ? 'コメント(自由テキスト)' : 'メモ・引き出し線';
+    if (kind === 'notes') return el.leader === false ? 'メモ(矢印なし)' : 'メモ(矢印つき)';
     if (kind === 'dimensions') return '寸法線';
     return '照明・音響';
   }

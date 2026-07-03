@@ -3,16 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- 古い版がブラウザに残らないようにキャッシュを無効化 -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <title>深夜酒類 図面エディタ</title>
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.49.0">
+  <link rel="stylesheet" href="css/style.css?v=1.50.0">
 </head>
 <body>
   <header class="topbar">
@@ -161,12 +157,9 @@
       </section>
 
       <section class="group">
-        <h3>メモ・コメント</h3>
-        <button id="btnAddNote" class="btn block">メモを追加(引き出し線つき)</button>
-        <button id="btnAddComment" class="btn block">コメントを追加(自由な文字)</button>
-        <p class="muted">どちらも、いま開いている図面にだけ表示され、PDFにもそのまま印字されます。本文は右の「選択中の要素」で編集できます。<br>
-          ・<b>メモ</b>: 矢印つき。先端(□)をドラッグで指したい場所へ。<br>
-          ・<b>コメント</b>: 矢印なしの文字ブロック。本体をドラッグで好きな位置へ動かせます。</p>
+        <h3>メモ</h3>
+        <button id="btnAddNote" class="btn block">メモを追加</button>
+        <p class="muted">いま開いている図面にだけ表示され、PDFにもそのまま印字されます。本文は右の「選択中の要素」で編集できます。矢印(引き出し線)の有無も「選択中の要素」で切り替えられます。矢印の先端(□)はドラッグで指したい場所へ、本体もドラッグで動かせます。</p>
       </section>
 
       <section class="group">
@@ -318,13 +311,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.49.0"></script>
-  <script src="js/geometry.js?v=1.49.0"></script>
-  <script src="js/render.js?v=1.49.0"></script>
-  <script src="js/interactions.js?v=1.49.0"></script>
-  <script src="js/print.js?v=1.49.0"></script>
-  <script src="js/forms.js?v=1.49.0"></script>
-  <script src="js/main.js?v=1.49.0"></script>
+  <script src="js/model.js?v=1.50.0"></script>
+  <script src="js/geometry.js?v=1.50.0"></script>
+  <script src="js/render.js?v=1.50.0"></script>
+  <script src="js/interactions.js?v=1.50.0"></script>
+  <script src="js/print.js?v=1.50.0"></script>
+  <script src="js/forms.js?v=1.50.0"></script>
+  <script src="js/main.js?v=1.50.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;
