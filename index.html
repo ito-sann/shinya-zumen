@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.50.0">
+  <link rel="stylesheet" href="css/style.css?v=1.51.0">
 </head>
 <body>
   <header class="topbar">
@@ -68,8 +68,16 @@
         <div class="size-row" id="regionW2Row" style="display:none">
           <label>上底(台形) <input type="number" id="regionW2" value="1600" step="100"> mm</label>
         </div>
+        <label class="field">線色(囲い線)
+          <select id="regionLineColor">
+            <option value="">標準(黒)</option>
+            <option value="#1d4ed8">青</option>
+            <option value="#e53935">赤</option>
+            <option value="#2e7d32">緑</option>
+          </select>
+        </label>
         <button id="btnDrawPoly" class="btn block">多角形で描く</button>
-        <p class="muted">L字や斜め壁など自由な形は、キャンバス上で角をクリックして囲います(面積は座標法で自動計算)。</p>
+        <p class="muted">L字や斜め壁など自由な形は、キャンバス上で角をクリックして囲います(面積は座標法で自動計算)。線色はここで選んだ色で追加され、あとから「選択中の要素」で好きな色に変えられます(線種・辺ごとの表示も同様)。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -191,24 +199,6 @@
             </select>
           </label>
         </div>
-        <label class="field">求積図の線色
-          <select id="metaColors">
-            <option value="mono">標準(黒)</option>
-            <option value="police">色分け(営業所=青・客室=赤・調理場=緑)</option>
-          </select>
-        </label>
-        <div class="size-row">
-          <label>営業所囲い線
-            <select id="linePremises"><option value="solid">実線</option><option value="dotted">点線</option><option value="dashed">破線</option><option value="hidden">非表示</option></select>
-          </label>
-          <label>客室囲い線
-            <select id="lineKyakushitsu"><option value="solid">実線</option><option value="dotted">点線</option><option value="dashed">破線</option><option value="hidden">非表示</option></select>
-          </label>
-        </div>
-        <label class="field">調理場囲い線
-          <select id="lineChubo"><option value="solid">実線</option><option value="dotted">点線</option><option value="dashed">破線</option><option value="hidden">非表示</option></select>
-        </label>
-        <p class="muted">「色分け」を選ぶと、営業所全体=青、客室=赤、調理場=緑の囲い線を図面に重ねます。県の指定に合わせて実線・点線・破線を切り替えられます。</p>
         <label class="check-row"><input type="checkbox" id="metaFrame"> 用紙枠ガイドを表示</label>
         <label class="check-row"><input type="checkbox" id="metaNorth"> 方位記号(N)を表示</label>
         <label class="check-row"><input type="checkbox" id="printTrueScale"> PDFを実寸の縮尺で印刷(定規で正確に1/縮尺)</label>
@@ -311,13 +301,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.50.0"></script>
-  <script src="js/geometry.js?v=1.50.0"></script>
-  <script src="js/render.js?v=1.50.0"></script>
-  <script src="js/interactions.js?v=1.50.0"></script>
-  <script src="js/print.js?v=1.50.0"></script>
-  <script src="js/forms.js?v=1.50.0"></script>
-  <script src="js/main.js?v=1.50.0"></script>
+  <script src="js/model.js?v=1.51.0"></script>
+  <script src="js/geometry.js?v=1.51.0"></script>
+  <script src="js/render.js?v=1.51.0"></script>
+  <script src="js/interactions.js?v=1.51.0"></script>
+  <script src="js/print.js?v=1.51.0"></script>
+  <script src="js/forms.js?v=1.51.0"></script>
+  <script src="js/main.js?v=1.51.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

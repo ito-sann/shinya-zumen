@@ -333,14 +333,6 @@
          *   'centerline' … 壁芯の外周(座標法)
          *   'both'       … 両方を併記 */
         premisesMethod: 'regions',
-        /* 求積図の線色: 'mono'=黒 / 'police'=営業所:青・客室:赤・調理場:緑(慣行色) */
-        colorMode: 'mono',
-        /* 色分け囲い線の線種。colorMode='police' のときに使う。 */
-        boundaryLineStyles: {
-          premises: 'solid',
-          kyakushitsu: 'solid',
-          chubo: 'solid',
-        },
         /* 柱の面積を、柱が立っている区画(客室・調理場など)の面積から差し引くか */
         deductPillars: false,
         /* PDFを実寸の縮尺(定規で測って正確に1/縮尺)で印刷するか。
@@ -789,6 +781,35 @@
     convertFontMm(project.fittings, 200);
     convertFontMm(project.notes, 240);
     convertFontMm(project.dimensions, 240);
+    // 旧「色分け(慣行色)」の全体設定 → 区画ごとの線色へ引っ越す。
+    // 客室=赤・調理場=緑・壁芯線=青を、まだ個別の色が付いていない要素にだけ付ける。
+    if (obj.meta && obj.meta.colorMode === 'police') {
+      const oldStyles = Object.assign(
+        { premises: 'solid', kyakushitsu: 'solid', chubo: 'solid' },
+        obj.meta.boundaryLineStyles || {});
+      const useOf = (r) => {
+        if (r.type === 'pillar') return 'display';
+        const u = r.areaUse || 'auto';
+        if (u !== 'auto') return u;
+        const t = REGION_TYPES[r.type] || {};
+        return t.defaultAreaUse || r.type;
+      };
+      const colorFor = { kyakushitsu: '#e53935', chubo: '#2e7d32' };
+      for (const r of project.regions) {
+        const use = useOf(r);
+        const color = colorFor[use];
+        if (!color || oldStyles[use] === 'hidden' || r.boundaryColor) continue;
+        r.boundaryColor = color;
+        if (!r.boundaryLineStyle && oldStyles[use] !== 'solid') {
+          r.boundaryLineStyle = oldStyles[use];
+        }
+      }
+      if (project.premise && !project.premise.lineColor && oldStyles.premises !== 'hidden') {
+        project.premise.lineColor = '#1d4ed8';
+      }
+    }
+    delete project.meta.colorMode;
+    delete project.meta.boundaryLineStyles;
     if (typeof project._seq !== 'number') {
       project._seq = 1 + project.regions.length + project.furniture.length +
                      project.fittings.length + project.fixtures.length;

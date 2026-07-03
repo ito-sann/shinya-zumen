@@ -397,6 +397,8 @@
       const w2 = shape === 'trapezoid' ? clampSize($('regionW2').value) : undefined;
       ensureRegionVisible(type); // 今のレイヤーで見えない種類なら平面図へ切り替え
       const r = M.addRegion(project, type, w, h, shape, w2);
+      const lc = $('regionLineColor').value;
+      if (lc) r.boundaryColor = lc;
       placeAtViewCenter(r);
       state.selectedId = r.id;
       refresh(); showProps(r);
@@ -421,6 +423,8 @@
       state.draftKind = 'region';
       I.beginPolygon(state, (pts) => {
         const r = M.addPolygonRegion(project, type, pts);
+        const lc = $('regionLineColor').value;
+        if (lc) r.boundaryColor = lc;
         state.selectedId = r.id;
         refresh(); showProps(r);
       });
@@ -761,15 +765,6 @@
     $('metaFrame').checked = m.showPaperFrame !== false;
     $('metaNorth').checked = m.showNorthMark === true;
     $('metaFontScale').value = String(m.fontScale || 100);
-    $('metaColors').value = m.colorMode || 'mono';
-    m.boundaryLineStyles = Object.assign({
-      premises: 'solid',
-      kyakushitsu: 'solid',
-      chubo: 'solid',
-    }, m.boundaryLineStyles || {});
-    $('linePremises').value = m.boundaryLineStyles.premises;
-    $('lineKyakushitsu').value = m.boundaryLineStyles.kyakushitsu;
-    $('lineChubo').value = m.boundaryLineStyles.chubo;
     $('premMethod').value = m.premisesMethod || 'regions';
     $('premWall').value = project.premise ? project.premise.wallThickness : 100;
     $('premMeasured').value = project.premise ? project.premise.measuredAt : 'inner';
@@ -788,10 +783,6 @@
     $('metaFrame').onchange = (e) => { m.showPaperFrame = e.target.checked; draw(); };
     $('metaNorth').onchange = (e) => { m.showNorthMark = e.target.checked; draw(); };
     $('metaFontScale').onchange = (e) => { m.fontScale = parseInt(e.target.value, 10); draw(); };
-    $('metaColors').onchange = (e) => { m.colorMode = e.target.value; draw(); };
-    $('linePremises').onchange = (e) => { m.boundaryLineStyles.premises = e.target.value; draw(); };
-    $('lineKyakushitsu').onchange = (e) => { m.boundaryLineStyles.kyakushitsu = e.target.value; draw(); };
-    $('lineChubo').onchange = (e) => { m.boundaryLineStyles.chubo = e.target.value; draw(); };
     // 営業所求積の方式(署のローカルルール)。求積表とサマリーに反映する
     $('premMethod').onchange = (e) => { m.premisesMethod = e.target.value; refresh(); };
     // 柱の面積を区画(客室・調理場など)の面積から差し引くか
@@ -1210,8 +1201,10 @@
         <option value="dotted"${el.boundaryLineStyle === 'dotted' ? ' selected' : ''}>点線</option>
         <option value="dashed"${el.boundaryLineStyle === 'dashed' ? ' selected' : ''}>破線</option>
       </select></div>`;
-      html += `<label class="prop-row"><span>線色</span>
-        <input type="color" id="propBoundaryColor" value="${el.boundaryColor || '#333333'}"></label>`;
+      html += `<div class="prop-row"><span>線色</span><span class="font-ctrl">
+        <input type="color" id="propBoundaryColor" value="${el.boundaryColor || '#333333'}">
+        <button type="button" id="propBoundaryColorReset" class="btn small">標準に戻す</button>
+      </span></div>`;
       html += `<label class="check-row"><input type="checkbox" data-fieldbool="showDims" ${el.showDims !== false ? 'checked' : ''}> 辺の長さを表示</label>`;
       const edgeCount = regionEdgeCount(el);
       const hiddenEdges = new Set((el.hiddenEdges || []).map((n) => parseInt(n, 10)));
@@ -1370,6 +1363,10 @@
       html += `<div class="prop-row"><span>壁厚</span><b>${el.wallThickness} mm</b></div>`;
       html += `<div class="prop-row"><span>測り方</span><b>${el.measuredAt === 'center' ? '壁芯の寸法' : '内側の寸法(内法)'}</b></div>`;
       html += `<div class="prop-row"><span>面積(壁芯)</span><b>${c.total.toFixed(2)} ㎡</b></div>`;
+      html += `<div class="prop-row"><span>壁芯線の色</span><span class="font-ctrl">
+        <input type="color" id="propPremiseColor" value="${el.lineColor || '#111111'}">
+        <button type="button" id="propPremiseColorReset" class="btn small">標準に戻す</button>
+      </span></div>`;
       html += '<p class="muted">壁厚・測り方は左の「営業所外周(壁芯)」欄で変更できます。頂点はキャンバス上でドラッグでも動かせます。</p>';
       el.points.forEach((p, i) => {
         html += `<div class="prop-row vertex-row"><span>P${i + 1}</span>
@@ -1531,6 +1528,24 @@
       boundaryColor.oninput = (e) => {
         el.boundaryColor = e.target.value;
         refresh();
+      };
+      const reset = box.querySelector('#propBoundaryColorReset');
+      if (reset) reset.onclick = () => {
+        delete el.boundaryColor;
+        refresh(); showProps(el);
+      };
+    }
+    // 営業所外周: 壁芯線の色
+    const premiseColor = box.querySelector('#propPremiseColor');
+    if (premiseColor) {
+      premiseColor.oninput = (e) => {
+        el.lineColor = e.target.value;
+        refresh();
+      };
+      const reset = box.querySelector('#propPremiseColorReset');
+      if (reset) reset.onclick = () => {
+        delete el.lineColor;
+        refresh(); showProps(el);
       };
     }
     const edgeChecks = Array.from(box.querySelectorAll('[data-region-edge]'));

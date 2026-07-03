@@ -1170,26 +1170,21 @@
     if (!pr || (pr.points || []).length < 3) return;
     const rl = global.Geometry.premiseRegionLike(pr);
     const pts = rl.points.map((p) => worldToScreen(rl.x + p.x, rl.y + p.y));
-    const police = project.meta.colorMode === 'police';
-    const styles = boundaryLineStyles(project);
-    const premiseStyle = police ? styles.premises : 'solid';
+    const color = pr.lineColor || '#111'; // 壁芯線の色(営業所外周のプロパティで変更可)
     ctx.save();
-    if (premiseStyle !== 'hidden') {
-      ctx.strokeStyle = police ? '#1d4ed8' : '#111';
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash(police ? lineDashFor(premiseStyle) : []);
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.closePath();
-      ctx.stroke();
-    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.stroke();
     ctx.restore();
     drawPolygonDims(ctx, rl); // 辺長(m)と P1, P2 … を共通処理で付ける
     // 凡例的なラベル
     const top = pts.reduce((a, p) => (p.y < a.y ? p : a), pts[0]);
     ctx.save();
-    ctx.fillStyle = police ? '#1d4ed8' : '#111';
+    ctx.fillStyle = color;
     ctx.font = `bold ${fontPx(260)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
@@ -1643,80 +1638,12 @@
     }
   }
 
-  /* 求積図の線色(色分けモード時)。営業所=青・客室=赤・調理場=緑の慣行色。 */
-  function strokeFor(r, project) {
-    if (project.meta.colorMode !== 'police') return null;
-    if (currentLayer === 'kyuseki') {
-      const use = global.Geometry.areaUseForRegion(r);
-      if (use === 'kyakushitsu') return '#e53935';
-      if (use === 'chubo') return '#2e7d32';
-    }
-    return null;
-  }
-
-  function boundaryLineStyles(project) {
-    return Object.assign({
-      premises: 'solid',
-      kyakushitsu: 'solid',
-      chubo: 'solid',
-    }, (project.meta && project.meta.boundaryLineStyles) || {});
-  }
-
+  /* 区画の線種(実線・点線・破線)を Canvas の破線パターンに変換する。
+   * 線の色は区画ごとの boundaryColor で指定する(全体設定は廃止)。 */
   function lineDashFor(style) {
     if (style === 'dotted') return [wpx(80), wpx(120)];
     if (style === 'dashed') return [wpx(360), wpx(180)];
     return [];
-  }
-
-  function regionOutlinePoints(r) {
-    if (!r) return [];
-    if (r.shape === 'polygon') {
-      return polygonScreenPts(r);
-    }
-    const cx = r.x + r.w / 2;
-    const cy = r.y + r.h / 2;
-    const rad = (r.rotation || 0) * Math.PI / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    const pts = shapePoints(r.shape || 'rect', r.w, r.h, r.w2 != null ? r.w2 : r.w);
-    return pts.map(([px, py]) => worldToScreen(
-      cx + px * cos - py * sin,
-      cy + px * sin + py * cos
-    ));
-  }
-
-  function strokeOutline(ctx, pts, color, style) {
-    if (!pts || pts.length < 3 || style === 'hidden') return;
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(2, wpx(55));
-    ctx.setLineDash(lineDashFor(style));
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawBoundaryLines(ctx, project) {
-    if (!project.meta || project.meta.colorMode !== 'police') return;
-    if (['plan', 'kyuseki'].indexOf(currentLayer) < 0) return;
-    const styles = boundaryLineStyles(project);
-    // 求積図では壁芯線そのものを描くので、囲い線の重ね描きは平面図だけにする
-    if (currentLayer !== 'kyuseki' && project.premise) {
-      strokeOutline(ctx, regionOutlinePoints(global.Geometry.premiseRegionLike(project.premise)), '#1d4ed8', styles.premises);
-    }
-    for (const r of project.regions || []) {
-      if (r.boundaryOnly === true) continue;
-      if (isPillarRegion(r)) continue;
-      const use = global.Geometry.areaUseForRegion(r);
-      if (use === 'kyakushitsu') {
-        strokeOutline(ctx, regionOutlinePoints(r), '#e53935', styles.kyakushitsu);
-      } else if (use === 'chubo') {
-        strokeOutline(ctx, regionOutlinePoints(r), '#2e7d32', styles.chubo);
-      }
-    }
   }
 
   function isCounterFurniture(f) {
@@ -1782,7 +1709,7 @@
         fill: vis.regionsFill,
         muted: !isMain(el),
         selected: state.selectedId === el.id,
-        stroke: strokeFor(el, project),
+        stroke: null,
         neutralStroke: currentLayer === 'lighting' ? '#333' : null,
         code,
       });
@@ -1824,7 +1751,6 @@
     if (currentLayer === 'kyuseki' && project.premise) {
       drawPremiseCenterline(ctx, project);
     }
-    drawBoundaryLines(ctx, project);
     // 求積表(計算過程)を図面そのものに重ねる(求積図のみ・設定で切替)
     if (currentLayer === 'kyuseki' && project.meta.showKyusekiTable !== false) {
       drawKyusekiTable(ctx, canvas, project);
