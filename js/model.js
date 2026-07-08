@@ -624,6 +624,7 @@
       id: nextId(project, 'd'),
       x1, y1, x2, y2,
       layer: layer || 'drawings',
+      showLength: false, // 既定では長さの数値は図面に表示しない
     };
     project.dimensions = project.dimensions || [];
     project.dimensions.push(dim);

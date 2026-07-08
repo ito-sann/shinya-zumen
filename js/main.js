@@ -1302,6 +1302,7 @@
         ['lighting', '照明・音響設備図'],
       ];
       html += `<div class="prop-row"><span>長さ</span><b id="propDimLen">${lenM.toFixed(2)} m</b></div>`;
+      html += `<label class="check-row"><input type="checkbox" data-fieldbool="showLength" ${el.showLength ? 'checked' : ''}> 図面に長さの数値を表示</label>`;
       html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
       dimLayerOptions.forEach(([layer, label]) => {
         html += `<label class="check-row"><input type="checkbox" data-dim-layer="${layer}" ${dimLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;

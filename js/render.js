@@ -1769,24 +1769,26 @@
       ctx.lineTo(p.x + nx * t, p.y + ny * t);
       ctx.stroke();
     }
-    // 長さ(m)を中点の少し外側(線の上側)に
-    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-    const off = Math.max(8, wpx(220));
-    ctx.font = `${fontPx(240, d)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    // 文字が線で隠れないよう白フチを敷く
-    const label = lenM.toFixed(2) + 'm';
-    ctx.save();
-    ctx.translate(mx - nx * off, my - ny * off);
-    let rot = ang;
-    if (rot > Math.PI / 2 || rot < -Math.PI / 2) rot += Math.PI; // 文字が逆さまにならないように
-    ctx.rotate(rot);
-    ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
-    ctx.strokeText(label, 0, 0);
-    ctx.fillStyle = line;
-    ctx.fillText(label, 0, 0);
-    ctx.restore();
+    // 長さ(m)を中点の少し外側(線の上側)に。既定では表示しない(要素ごとに切替可)
+    if (d.showLength) {
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const off = Math.max(8, wpx(220));
+      ctx.font = `${fontPx(240, d)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      // 文字が線で隠れないよう白フチを敷く
+      const label = lenM.toFixed(2) + 'm';
+      ctx.save();
+      ctx.translate(mx - nx * off, my - ny * off);
+      let rot = ang;
+      if (rot > Math.PI / 2 || rot < -Math.PI / 2) rot += Math.PI; // 文字が逆さまにならないように
+      ctx.rotate(rot);
+      ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
+      ctx.strokeText(label, 0, 0);
+      ctx.fillStyle = line;
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    }
     // 選択中: 両端ハンドル
     if (opts.selected) {
       for (const p of [a, b]) {
