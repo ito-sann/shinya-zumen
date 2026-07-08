@@ -1427,13 +1427,13 @@
    * きれいに格子状(グリッド)に並べる。間隔は詰めて、用紙からはみ出しにくくする。 */
   function furnViewLayout(project) {
     const groups = global.Geometry.furnitureGroups(project);
-    // 余白・間隔(ワールドmm) — 旧版より大幅に詰めた
-    const PAD = 350;       // カード内側の余白
-    const LABEL_H = 650;   // 品名ラベルの高さ
-    const CAP_H = 1500;    // 図の下: 正面/側面ラベル + 寸法(幅・奥行・高さ)の領域
-    const INNER_GAP = 600; // 正面図と側面図のすき間
-    const CAP_MIN_W = 3000; // 寸法行(幅 ◯m × 奥行 ◯m)が収まる最小カード幅
-    const COL_GAP = 900, ROW_GAP = 900; // カード同士のすき間
+    // 余白・間隔(ワールドmm) — カード自体を小さくするため、さらに詰めた
+    const PAD = 220;       // カード内側の余白
+    const LABEL_H = 450;   // 品名ラベルの高さ
+    const CAP_H = 1100;    // 図の下: 正面/側面ラベル + 寸法(幅・奥行・高さ)の領域
+    const INNER_GAP = 400; // 正面図と側面図のすき間
+    const CAP_MIN_W = 2400; // 寸法行(幅 ◯m × 奥行 ◯m)が収まる最小カード幅
+    const COL_GAP = 550, ROW_GAP = 550; // カード同士のすき間
     const MARGIN = 900;    // 用紙枠の内側に取る余白
     const TITLE_H = 1500;  // 上部タイトルのための余白
 
@@ -1581,7 +1581,7 @@
       const name = `${g.label}${G.code(g.number)}(${g.count}台)` + (over ? ' ⚠高さ1m超' : '');
       const lp = worldToScreen(left, c.y + pad);
       ctx.fillStyle = over ? '#c62828' : '#222';
-      ctx.font = `bold ${fontPx(250)}px sans-serif`;
+      ctx.font = `bold ${fontPx(210)}px sans-serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(name, lp.x, lp.y);
@@ -1599,7 +1599,7 @@
       ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#c62828';
-      ctx.font = `${fontPx(200)}px sans-serif`;
+      ctx.font = `${fontPx(170)}px sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
       ctx.fillText('1m', m2.x - wpx(60), m2.y - wpx(40));
@@ -1626,20 +1626,20 @@
         // 図の真下には「正面 / 側面」だけ(短いので隣と重ならない)
         const capX = worldToScreen(v.x0 + v.w / 2, c.floorY);
         ctx.fillStyle = '#1565c0';
-        ctx.font = `${fontPx(190)}px sans-serif`;
+        ctx.font = `${fontPx(165)}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(v.name, capX.x, capX.y + wpx(150));
+        ctx.fillText(v.name, capX.x, capX.y + wpx(120));
       }
       // --- 寸法(幅・奥行・高さ)はカード左下にまとめて左そろえで書く ---
       // 図の真下に重ねると正面・側面のキャプションどうしが重なるため、行で分ける。
-      const dim1 = worldToScreen(left, c.floorY + 620);
+      const dim1 = worldToScreen(left, c.floorY + 480);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.font = `${fontPx(185)}px sans-serif`;
+      ctx.font = `${fontPx(160)}px sans-serif`;
       ctx.fillStyle = '#37474f';
       ctx.fillText(`幅 ${G.fmtM(g.w)}m  ×  奥行 ${G.fmtM(g.h)}m`, dim1.x, dim1.y);
-      const dim2 = worldToScreen(left, c.floorY + 620 + 470);
+      const dim2 = worldToScreen(left, c.floorY + 480 + 340);
       ctx.fillStyle = over ? '#c62828' : '#37474f';
       ctx.fillText(`高さ ${G.fmtM(g.height)}m${over ? '(⚠1m超)' : ''}`, dim2.x, dim2.y);
     }
