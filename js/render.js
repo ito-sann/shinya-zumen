@@ -13,7 +13,6 @@
     plan:      { label: '平面図' },
     kyuseki:   { label: '求積図' },
     lighting:  { label: '照明・音響設備図' },
-    plumbing:  { label: '給排水図' },
     furnviews: { label: '備品姿図' },
   };
   const DEFAULT_FITTING_LAYERS = ['plan', 'kyuseki'];
@@ -1842,10 +1841,6 @@
       case 'lighting':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: false, fittings: false, fixtures: true, dims: false, table: 'fixtures' };
-      case 'plumbing':
-        // 給排水図: 間取りを下地にして、便器・手洗い器等の設備アイコンだけを示す
-        return { regionsFill: false, allRegions: true, regionTypes: null,
-                 furniture: false, fittings: true, fixtures: false, dims: false, table: false };
       case 'furnviews':
         // 備品姿図: 間取りは描かず、備品の正面図・側面図だけを並べる
         return { regionsFill: false, allRegions: false, regionTypes: [],
@@ -1903,9 +1898,9 @@
     }
 
     const regions = project.regions.filter((r) => {
-      // 面積計算のための囲い線は、照明・音響設備図・給排水図には出さない。
+      // 面積計算のための囲い線は、照明・音響設備図には出さない。
       // 設備図では部屋の下地だけ見せ、求積用の赤/緑/青線で混乱しないようにする。
-      if ((currentLayer === 'lighting' || currentLayer === 'plumbing') && isAreaBoundaryLine(r)) return false;
+      if (currentLayer === 'lighting' && isAreaBoundaryLine(r)) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(r.type) >= 0);
     });
 
@@ -1928,7 +1923,7 @@
         muted: !isMain(el),
         selected: state.selectedId === el.id,
         stroke: null,
-        neutralStroke: (currentLayer === 'lighting' || currentLayer === 'plumbing') ? '#333' : null,
+        neutralStroke: currentLayer === 'lighting' ? '#333' : null,
         code,
       });
       const showRegionDims = el.showDims !== false;
@@ -1938,8 +1933,8 @@
       }
     };
 
-    if (currentLayer === 'lighting' || currentLayer === 'plumbing') {
-      // 照明・音響設備図・給排水図では、区画を設備記号の下地として必ず先に描く。
+    if (currentLayer === 'lighting') {
+      // 照明・音響設備図では、区画を設備記号の下地として必ず先に描く。
       // 重なり順の影響で多角形区画が設備図から抜けて見えるのを防ぐ。
       for (const r of regions) drawVisibleRegion(r);
     }
@@ -1947,13 +1942,13 @@
     for (const item of global.Model.sortedOrderableItems(project)) {
       const el = item.element;
       if (item.kind === 'regions') {
-        if (currentLayer === 'lighting' || currentLayer === 'plumbing') continue;
+        if (currentLayer === 'lighting') continue;
         if (!visibleRegionIds.has(el.id)) continue;
         drawVisibleRegion(el);
       } else if (item.kind === 'walls') {
         drawWall(ctx, el, {
           selected: state.selectedId === el.id,
-          muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki' && currentLayer !== 'plumbing',
+          muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki',
         });
       } else if (item.kind === 'fittings') {
         if (fittingVisibleOnLayer(el, currentLayer)) drawFitting(ctx, el, { selected: state.selectedId === el.id });
