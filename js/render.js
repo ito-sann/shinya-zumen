@@ -55,6 +55,21 @@
     if (el && el.fontSize > 0) return wpx(defaultMm * el.fontSize / 15);
     return wpx(defaultMm * fontScale);
   }
+
+  /* 回転した図形の中で文字だけ正立(水平)のまま描く。
+   * ctx は「中心へtranslate→rotate(rotRad)」まで適用済みの状態で呼ぶこと。
+   * (x,y)は回転前のローカル座標(今まで ctx.fillText(text,x,y) に渡していた値と同じ)。
+   * 表示位置は回転後の見た目位置に合わせつつ、文字の向きだけ回転を打ち消す。 */
+  function fillTextUpright(ctx, rotRad, x, y, text) {
+    if (!rotRad) { ctx.fillText(text, x, y); return; }
+    const cos = Math.cos(rotRad), sin = Math.sin(rotRad);
+    const xp = x * cos - y * sin;
+    const yp = x * sin + y * cos;
+    ctx.save();
+    ctx.rotate(-rotRad);
+    ctx.fillText(text, xp, yp);
+    ctx.restore();
+  }
   function screenToWorld(px, py) {
     return { x: (px - view.offsetX) / view.zoom, y: (py - view.offsetY) / view.zoom };
   }
@@ -562,7 +577,7 @@
       ctx.font = `${fpx}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(f.label + num, 0, labelY);
+      fillTextUpright(ctx, (f.rotation || 0) * Math.PI / 180, 0, labelY, f.label + num);
     }
     ctx.restore();
   }
@@ -639,7 +654,7 @@
     ctx.font = `${fontPx(180, g)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(g.label || 'カーテン', 0, h / 2 + wpx(45));
+    fillTextUpright(ctx, (g.rotation || 0) * Math.PI / 180, 0, h / 2 + wpx(45), g.label || 'カーテン');
   }
 
   /* 建具・設備(出入口・扉・戸・窓・壁・柱)を製図記号で描く */
@@ -697,7 +712,7 @@
       ctx.font = `${fontPx(200, g)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText('出入口', 0, h / 2 + wpx(50));
+      fillTextUpright(ctx, (g.rotation || 0) * Math.PI / 180, 0, h / 2 + wpx(50), '出入口');
     } else if (g.kind === 'toilet') {
       // 洋式便器: 奥にタンク(角丸)+上面中央のフラッシュボタン、手前に便座(座面の輪を二重楕円で表現)
       ctx.strokeStyle = line;
@@ -874,7 +889,7 @@
     ctx.font = `${fontPx(180, g)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(g.label || fallback, 0, h / 2 + wpx(45));
+    fillTextUpright(ctx, (g.rotation || 0) * Math.PI / 180, 0, h / 2 + wpx(45), g.label || fallback);
   }
 
   /* 簡易の両矢印(始点・終点に三角) */
