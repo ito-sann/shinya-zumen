@@ -219,12 +219,43 @@
       .filter((n) => Number.isFinite(n) && n >= 0));
   }
 
-  function strokeVisibleEdges(ctx, pts, r) {
+  /* 辺iに設定された壁厚(mm)。0(未設定)なら普通の1本線のまま。 */
+  function edgeWallThicknessMm(r, i) {
+    const t = (r.edgeWallThickness || {})[i];
+    return Number.isFinite(t) && t > 0 ? t : 0;
+  }
+
+  /* 区画の1辺(a-b)を、壁厚ぶん離した黒い2本線(閉じた帯)で描く。
+   * 内壁・営業所外周と同じ「厚みを持つ壁」の見た目に揃える。 */
+  function strokeRegionWallEdge(ctx, a, b, thicknessPx, selected) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const hx = nx * thicknessPx / 2, hy = ny * thicknessPx / 2;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = selected ? '#d32f2f' : '#000';
+    ctx.beginPath();
+    ctx.moveTo(a.x + hx, a.y + hy);
+    ctx.lineTo(b.x + hx, b.y + hy);
+    ctx.lineTo(b.x - hx, b.y - hy);
+    ctx.lineTo(a.x - hx, a.y - hy);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokeVisibleEdges(ctx, pts, r, selected) {
     const hidden = hiddenEdgeSet(r);
     for (let i = 0; i < pts.length; i++) {
       if (hidden.has(i)) continue;
       const a = pts[i];
       const b = pts[(i + 1) % pts.length];
+      const t = edgeWallThicknessMm(r, i);
+      if (t > 0) {
+        strokeRegionWallEdge(ctx, a, b, t * view.zoom, selected);
+        continue;
+      }
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
@@ -278,7 +309,7 @@
     ctx.strokeStyle = opts.selected ? '#d32f2f'
       : (opts.neutralStroke || customStroke || (boundaryOnly ? (r.color || '#333') : (muted ? '#9aa0a6' : (opts.stroke || '#333'))));
     ctx.setLineDash(lineDashFor(r.boundaryLineStyle || 'solid'));
-    strokeVisibleEdges(ctx, pts, r);
+    strokeVisibleEdges(ctx, pts, r, opts.selected);
     if (shouldDrawRegionLabel(r)) {
       // ラベルは重心に置く(既定320mm相当・全体設定・個別指定で調整可)
       const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
@@ -390,7 +421,7 @@
     ctx.strokeStyle = opts.selected ? '#d32f2f'
       : (opts.neutralStroke || customStroke || (boundaryOnly ? (r.color || '#333') : (muted ? '#9aa0a6' : (opts.stroke || '#333'))));
     ctx.setLineDash(lineDashFor(r.boundaryLineStyle || 'solid'));
-    strokeVisibleEdges(ctx, pts, r);
+    strokeVisibleEdges(ctx, pts, r, opts.selected);
     if (opts.selected) {
       drawSelectedEdgeLabels(ctx, pts, hiddenEdgeSet(r));
       ctx.setLineDash([]);

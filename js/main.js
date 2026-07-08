@@ -1252,11 +1252,15 @@
       html += `<label class="check-row"><input type="checkbox" data-fieldbool="showDims" ${el.showDims !== false ? 'checked' : ''}> 辺の長さを表示</label>`;
       const edgeCount = regionEdgeCount(el);
       const hiddenEdges = new Set((el.hiddenEdges || []).map((n) => parseInt(n, 10)));
+      const edgeWallThickness = el.edgeWallThickness || {};
       html += '<div class="prop-row"><span>輪郭線</span><div class="check-stack">';
       for (let i = 0; i < edgeCount; i++) {
-        html += `<label class="check-row"><input type="checkbox" data-region-edge="${i}" ${hiddenEdges.has(i) ? '' : 'checked'}> 辺${i + 1}を表示</label>`;
+        const t = edgeWallThickness[i] || 0;
+        html += `<label class="check-row"><input type="checkbox" data-region-edge="${i}" ${hiddenEdges.has(i) ? '' : 'checked'}> 辺${i + 1}を表示</label>
+          <label class="check-row">壁厚<input type="number" data-region-edge-wall="${i}" value="${t}" min="0" step="10" style="width:70px">mm</label>`;
       }
       html += '<button type="button" id="btnShowAllEdges" class="btn small">すべて表示</button></div></div>';
+      html += '<p class="muted">辺ごとに壁厚(mm)を入れると、その辺だけ内壁や営業所外周と同じ黒い2本線で描かれます。0のままなら今まで通りの1本線です(見た目だけの機能で、求積表には影響しません)。</p>';
       html += `<label class="check-row"><input type="checkbox" data-fieldbool="showLabel" ${el.showLabel ? 'checked' : ''}> 区画名を図面に表示</label>`;
     } else {
       html = `<div class="prop-row"><span>種別</span><b>${kindLabel(el, kind)}</b></div>`;
@@ -1623,6 +1627,17 @@
         };
       }
     }
+    const edgeWallInputs = Array.from(box.querySelectorAll('[data-region-edge-wall]'));
+    edgeWallInputs.forEach((inp) => {
+      inp.onchange = () => {
+        const i = parseInt(inp.dataset.regionEdgeWall, 10);
+        const t = Math.max(0, parseInt(inp.value, 10) || 0);
+        const map = Object.assign({}, el.edgeWallThickness || {});
+        if (t > 0) map[i] = t; else delete map[i];
+        el.edgeWallThickness = map;
+        refresh(); showProps(el);
+      };
+    });
     // 多角形の頂点座標の編集(原点の取り直しがあるため change で確定時に反映)
     box.querySelectorAll('[data-vx], [data-vy]').forEach((inp) => {
       inp.addEventListener('change', (e) => {
