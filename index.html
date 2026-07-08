@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.56.0">
+  <link rel="stylesheet" href="css/style.css?v=1.57.0">
 </head>
 <body>
   <header class="topbar">
@@ -153,13 +153,13 @@
         <p class="muted">柱は「区画を追加」から追加します。チェックすると、柱が立っている区画(客室・調理場など)の求積表に「△0.09㎡」のような控除行が入り、合計から差し引かれます。扱いは警察署により異なるため切り替え式です。</p>
       </section>
 
-      <section class="group" data-layers="plan kyuseki">
+      <section class="group" data-layers="plan kyuseki plumbing">
         <h3>設備アイコンを追加</h3>
         <div class="add-row">
           <select id="equipKind"></select>
           <button id="btnAddEquip" class="btn small">追加</button>
         </div>
-        <p class="muted">便器・手洗い器・電子レンジ・ガスコンロ・調理台など、「どこに何があるか」を示すアイコンを平面図に置けます。建具と同じく高さは持たず、備品姿図・見通し規制の対象にはなりません。角度(向き)は「選択中の要素」から調整できます。</p>
+        <p class="muted">便器・手洗い器・電子レンジ・ガスコンロ・調理台など、「どこに何があるか」を示すアイコンを、平面図と給排水図の両方に置けます(あとから「選択中の要素」の表示チェックで図面ごとにオン/オフ可能)。建具と同じく高さは持たず、備品姿図・見通し規制の対象にはなりません。角度(向き)は「選択中の要素」から調整できます。</p>
       </section>
 
       <section class="group" data-layers="lighting">
@@ -318,13 +318,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.56.0"></script>
-  <script src="js/geometry.js?v=1.56.0"></script>
-  <script src="js/render.js?v=1.56.0"></script>
-  <script src="js/interactions.js?v=1.56.0"></script>
-  <script src="js/print.js?v=1.56.0"></script>
-  <script src="js/forms.js?v=1.56.0"></script>
-  <script src="js/main.js?v=1.56.0"></script>
+  <script src="js/model.js?v=1.57.0"></script>
+  <script src="js/geometry.js?v=1.57.0"></script>
+  <script src="js/render.js?v=1.57.0"></script>
+  <script src="js/interactions.js?v=1.57.0"></script>
+  <script src="js/print.js?v=1.57.0"></script>
+  <script src="js/forms.js?v=1.57.0"></script>
+  <script src="js/main.js?v=1.57.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

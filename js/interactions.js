@@ -202,7 +202,7 @@
     const layer = global.Render.getLayer();
     const vis = global.Render.visibility(layer);
     if (kind === 'regions') {
-      if (layer === 'lighting' && isAreaBoundaryLine(el)) return false;
+      if ((layer === 'lighting' || layer === 'plumbing') && isAreaBoundaryLine(el)) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
     if (kind === 'walls') return layer !== 'furnviews';

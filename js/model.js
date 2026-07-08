@@ -577,7 +577,7 @@
       w: c.w,
       h: c.h,
       rotation: 0,
-      layers: ['plan', 'kyuseki'],
+      layers: c.category === 'equipment' ? ['plan', 'plumbing'] : ['plan', 'kyuseki'],
     };
     project.fittings.push(item);
     return item;

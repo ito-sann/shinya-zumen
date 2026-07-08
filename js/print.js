@@ -229,7 +229,7 @@
   }
 
   function frameScaleBarHtml(project, layer) {
-    if (['plan', 'kyuseki'].indexOf(layer) < 0) return '';
+    if (['plan', 'kyuseki', 'plumbing'].indexOf(layer) < 0) return '';
     const scale = project.meta.scale || 50;
     const mm = (worldMm) => (worldMm / scale).toFixed(2);
     return `<svg class="frame-scale-bar" style="width:${mm(1000)}mm;height:${mm(840)}mm;right:${mm(280)}mm;bottom:${mm(200)}mm"

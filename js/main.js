@@ -1346,7 +1346,7 @@
       }
       html += propNum('角度(度)', 'rotation', el.rotation || 0);
       if (kind === 'fittings') {
-        const fittingLayerOptions = ['plan', 'kyuseki', 'lighting'];
+        const fittingLayerOptions = ['plan', 'kyuseki', 'lighting', 'plumbing'];
         const fittingLayers = R.fittingLayers ? R.fittingLayers(el)
           : (Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'kyuseki']);
         html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
