@@ -604,12 +604,12 @@
   function addNote(project, layer, leader) {
     const note = {
       id: nextId(project, 'n'),
-      text: leader === false ? 'コメント' : 'メモ',
+      text: leader === true ? 'メモ' : 'コメント',
       x: 1500,
       y: 1500,
       tx: 0,    // 矢印の先端(指したい場所)。コメント(leader=false)では未使用
       ty: 2500,
-      leader: leader !== false, // false なら引き出し線なしの自由テキスト
+      leader: leader === true, // 既定では引き出し線(矢印)なしの自由テキスト(コメント)
       layer: layer || 'plan',
       layers: [layer || 'plan'],
     };
@@ -623,7 +623,8 @@
     const dim = {
       id: nextId(project, 'd'),
       x1, y1, x2, y2,
-      layer: layer || 'drawings',
+      layer: layer || 'kyuseki',
+      layers: [layer || 'kyuseki'], // 既定では求積図だけに表示(平面図には出さない)
       showLength: false, // 既定では長さの数値は図面に表示しない
     };
     project.dimensions = project.dimensions || [];

@@ -327,12 +327,13 @@
     // 寸法線(任意の2点間に長さを記入)
     $('btnAddDim').onclick = () => {
       if (state.measure) { I.cancelMeasure(state); draw(); return; }
-      // 図面系のレイヤーで使う(設備図・姿図では扱わない)
+      // 図面系のレイヤーで使う(設備図・姿図では扱わない)。既定では求積図だけに表示されるため、
+      // 描けない図面にいた場合は求積図へ切り替える。
       if (R.getLayer() === 'lighting' || R.getLayer() === 'furnviews') {
-        R.setLayer('plan'); buildLayerTabs();
+        R.setLayer('kyuseki'); buildLayerTabs();
       }
       I.beginMeasure(state, (x1, y1, x2, y2) => {
-        const dim = M.addDimension(project, x1, y1, x2, y2, 'drawings');
+        const dim = M.addDimension(project, x1, y1, x2, y2, 'kyuseki');
         state.selectedId = dim.id;
         refresh(); showProps(dim);
       });
