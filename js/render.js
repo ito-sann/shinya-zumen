@@ -1336,15 +1336,6 @@
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // ラベル(外周の左上の外側)
-    if (!opts.muted) {
-      const top = outer.reduce((a, p) => (p.y < a.y ? p : a), outer[0]);
-      ctx.fillStyle = '#37474f';
-      ctx.font = `${fontPx(240)}px sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(`営業所外周(壁厚${pr.wallThickness}mm)`, top.x, top.y - wpx(120));
-    }
     // 選択中: 入力頂点のハンドル(ドラッグで形を修正できる)
     if (opts.selected) {
       for (const p of pr.points) {
