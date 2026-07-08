@@ -252,6 +252,10 @@
     microwave:   { label: '電子レンジ', w: 450,  h: 350, category: 'equipment' },
     gasstove:    { label: 'ガスコンロ', w: 560,  h: 450, category: 'equipment' },
     choritai:    { label: '調理台',     w: 900,  h: 600, category: 'equipment' },
+    rangehood:   { label: '換気扇・レンジフード', w: 900, h: 600, category: 'equipment' },
+    extinguisher:{ label: '消火器',     w: 150,  h: 150, category: 'equipment' },
+    exit:        { label: '非常口',     w: 400,  h: 300, category: 'equipment' },
+    greasetrap:  { label: 'グリストラップ', w: 400, h: 300, category: 'equipment' },
   };
 
   /* 扉・戸(開き勝手の設定を持つ建具)の種類 */

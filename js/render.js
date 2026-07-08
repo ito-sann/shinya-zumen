@@ -762,6 +762,65 @@
       const inset = Math.min(w, h) * 0.1;
       ctx.strokeRect(-w / 2 + inset, -h / 2 + inset, w - inset * 2, h - inset * 2);
       labelBelow(ctx, g, h, line, '調理台');
+    } else if (g.kind === 'rangehood') {
+      // 換気扇・レンジフード: 天井付けなので破線の枠 + ベントの斜めスリット
+      ctx.strokeStyle = line;
+      ctx.setLineDash([wpx(90), wpx(60)]);
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.1);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const n = 4;
+      for (let i = 1; i <= n; i++) {
+        const t = i / (n + 1);
+        const x0 = -w / 2 + w * t, y0 = h / 2 * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(x0 - w * 0.08, y0);
+        ctx.lineTo(x0 + w * 0.08, -y0);
+        ctx.stroke();
+      }
+      labelBelow(ctx, g, h, line, '換気扇');
+    } else if (g.kind === 'extinguisher') {
+      // 消火器: 円筒形の本体(上から見て丸) + 上部にレバー・ホースの小さい突起
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      const r = Math.min(w, h) / 2 * 0.82;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.5, -r * 0.5);
+      ctx.lineTo(r * 1.3, -r * 1.3);
+      ctx.stroke();
+      labelBelow(ctx, g, h, line, '消火器');
+    } else if (g.kind === 'exit') {
+      // 非常口: 案内サインの枠 + 扉 + 逃げる方向の矢印
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.14);
+      ctx.fill(); ctx.stroke();
+      const doorW = w * 0.16;
+      ctx.strokeRect(-w / 2 + w * 0.12, -h * 0.32, doorW, h * 0.64);
+      arrow(ctx, -w / 2 + w * 0.12 + doorW + w * 0.06, 0, w / 2 - w * 0.12, 0);
+      labelBelow(ctx, g, h, line, '非常口');
+    } else if (g.kind === 'greasetrap') {
+      // グリストラップ・排水口: ふた(角丸四角)に格子状のスリット
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.12);
+      ctx.fill(); ctx.stroke();
+      const pad = Math.min(w, h) * 0.18;
+      const n = 4;
+      for (let i = 1; i <= n; i++) {
+        const x = -w / 2 + pad + (w - pad * 2) * (i / (n + 1));
+        ctx.beginPath();
+        ctx.moveTo(x, -h / 2 + pad);
+        ctx.lineTo(x, h / 2 - pad);
+        ctx.stroke();
+      }
+      labelBelow(ctx, g, h, line, 'グリストラップ');
     }
     ctx.restore();
   }
