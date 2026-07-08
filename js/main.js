@@ -238,7 +238,13 @@
     populateFurnStyles(); // 選択中の種類に応じた姿図スタイルを並べる
     const gk = $('fittingKind');
     for (const [key, v] of Object.entries(M.FITTING_CATALOG)) {
+      if (v.category === 'equipment') continue; // 設備アイコンは別欄にする
       gk.add(new Option(v.label, key));
+    }
+    const eqk = $('equipKind');
+    for (const [key, v] of Object.entries(M.FITTING_CATALOG)) {
+      if (v.category !== 'equipment') continue;
+      eqk.add(new Option(v.label, key));
     }
     const xk = $('fixKind');
     for (const [key, v] of Object.entries(M.FIXTURE_CATALOG)) {
@@ -544,6 +550,17 @@
       state.selectedId = g.id;
       refresh(); showProps(g);
       // いまの図面に描かれない種類のときだけ、どこで見えるかを一言だけ知らせる
+      if (!R.visibility(R.getLayer()).fittings) {
+        $('hint').textContent = `「${g.label}」を追加しました（平面図に表示されます）。`;
+      }
+    };
+    $('btnAddEquip').onclick = () => {
+      // 便器・手洗い器・電子レンジなどの設備アイコン。建具と同じ仕組み(高さなし・
+      // 姿図や見通し規制の対象外)で、平面図上に「どこに何があるか」を示すだけ。
+      const g = M.addFitting(project, $('equipKind').value);
+      placeAtViewCenter(g);
+      state.selectedId = g.id;
+      refresh(); showProps(g);
       if (!R.visibility(R.getLayer()).fittings) {
         $('hint').textContent = `「${g.label}」を追加しました（平面図に表示されます）。`;
       }
@@ -894,7 +911,11 @@
       push('内壁', 'walls', w, w.label || `内壁${i + 1}`, `厚${w.thickness || 100}mm`);
     });
     (project.furniture || []).forEach((f) => push('備品', 'furniture', f, f.label || (M.FURNITURE_CATALOG[f.kind] || {}).label || '備品', `${G.fmtM(f.w)}×${G.fmtM(f.h)}m`));
-    (project.fittings || []).forEach((g) => push('建具・壁', 'fittings', g, g.label || (M.FITTING_CATALOG[g.kind] || {}).label || '建具', `${G.fmtM(g.w)}m`));
+    (project.fittings || []).forEach((g) => {
+      const cat = (M.FITTING_CATALOG[g.kind] || {}).category;
+      const group = cat === 'equipment' ? '設備アイコン' : '建具・壁';
+      push(group, 'fittings', g, g.label || (M.FITTING_CATALOG[g.kind] || {}).label || '建具', `${G.fmtM(g.w)}m`);
+    });
     (project.fixtures || []).forEach((x) => push('照明・音響', 'fixtures', x, (M.FIXTURE_CATALOG[x.kind] || {}).label || '設備', (M.FIXTURE_CATALOG[x.kind] || {}).symbol || ''));
     (project.notes || []).forEach((n) => push('メモ', 'notes', n, 'メモ' + (n.leader === false ? '(矢印なし)' : ''), (n.text || '').split('\n')[0] || ''));
     return rows;

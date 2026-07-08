@@ -667,8 +667,68 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText('出入口', 0, h / 2 + wpx(50));
+    } else if (g.kind === 'toilet') {
+      // 洋式便器: 奥にタンク(四角)、手前に便座(楕円)
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      const tankH = h * 0.25;
+      ctx.fillRect(-w / 2, -h / 2, w, tankH);
+      ctx.strokeRect(-w / 2, -h / 2, w, tankH);
+      const bowlCy = -h / 2 + tankH + (h - tankH) / 2;
+      ctx.beginPath();
+      ctx.ellipse(0, bowlCy, w / 2 * 0.85, (h - tankH) / 2 * 0.9, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      labelBelow(ctx, g, h, line, '便器');
+    } else if (g.kind === 'washbasin') {
+      // 手洗い器: 楕円の洗面ボウル + 奥中央に蛇口
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w / 2 * 0.9, h / 2 * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h / 2 * 0.5, Math.max(wpx(30), w * 0.05), 0, Math.PI * 2);
+      ctx.stroke();
+      labelBelow(ctx, g, h, line, '手洗い器');
+    } else if (g.kind === 'microwave') {
+      // 電子レンジ: 本体の四角 + 内側にひとまわり小さい扉窓
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      const pad = Math.min(w, h) * 0.16;
+      ctx.strokeRect(-w / 2 + pad, -h / 2 + pad, w - pad * 2, h - pad * 2.6);
+      labelBelow(ctx, g, h, line, '電子レンジ');
+    } else if (g.kind === 'gasstove') {
+      // ガスコンロ: 本体の四角 + バーナー(丸)2つ
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      const r = Math.min(w, h) * 0.22;
+      ctx.beginPath();
+      ctx.arc(-w * 0.22, 0, r, 0, Math.PI * 2);
+      ctx.arc(w * 0.22, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      labelBelow(ctx, g, h, line, 'ガスコンロ');
+    } else if (g.kind === 'choritai') {
+      // 調理台: ただの四角(天板)
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      labelBelow(ctx, g, h, line, '調理台');
     }
     ctx.restore();
+  }
+
+  /* 設備アイコンの下にラベルを1行表示する(共通処理) */
+  function labelBelow(ctx, g, h, color, fallback) {
+    ctx.fillStyle = color;
+    ctx.font = `${fontPx(180, g)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(g.label || fallback, 0, h / 2 + wpx(45));
   }
 
   /* 簡易の両矢印(始点・終点に三角) */

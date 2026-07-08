@@ -232,18 +232,26 @@
     return prof && prof.length ? prof : null;
   }
 
-  /* 建具・設備カタログ(壁に沿って配置する線状の部品。mm)
-   * 扉・戸は開き勝手(flip=左右反転 / swing=内外反転)を持ち、製図記号で描く。 */
+  /* 建具・設備カタログ(壁に沿って配置する線状の部品、および平面図に置くだけの設備アイコン。mm)
+   * 扉・戸は開き勝手(flip=左右反転 / swing=内外反転)を持ち、製図記号で描く。
+   * category: 'fitting'=建具(出入口・扉・窓・壁) / 'equipment'=設備アイコン(便器など)。
+   * どちらも高さを持たず、備品姿図・見通し規制・備品一覧表の対象にはならない
+   * (「どこに何があるか」を示すだけの平面図上のアイコン)。 */
   const FITTING_CATALOG = {
-    entrance:    { label: '出入口',     w: 1200, h: 120 },
-    door:        { label: '片開き扉',   w: 800,  h: 120 },
-    doorDouble:  { label: '両開き扉',   w: 1600, h: 120 },
-    slideSingle: { label: '片引き戸',   w: 900,  h: 120 },
-    slideSplit:  { label: '引き分け戸', w: 1800, h: 120 },
-    slidePass:   { label: '引き違い戸', w: 1700, h: 120 },
-    window:      { label: '窓',         w: 1650, h: 120 },
-    curtain:     { label: 'カーテン',   w: 1800, h: 80 },
-    wall:        { label: '壁',         w: 2000, h: 120 },
+    entrance:    { label: '出入口',     w: 1200, h: 120, category: 'fitting' },
+    door:        { label: '片開き扉',   w: 800,  h: 120, category: 'fitting' },
+    doorDouble:  { label: '両開き扉',   w: 1600, h: 120, category: 'fitting' },
+    slideSingle: { label: '片引き戸',   w: 900,  h: 120, category: 'fitting' },
+    slideSplit:  { label: '引き分け戸', w: 1800, h: 120, category: 'fitting' },
+    slidePass:   { label: '引き違い戸', w: 1700, h: 120, category: 'fitting' },
+    window:      { label: '窓',         w: 1650, h: 120, category: 'fitting' },
+    curtain:     { label: 'カーテン',   w: 1800, h: 80,  category: 'fitting' },
+    wall:        { label: '壁',         w: 2000, h: 120, category: 'fitting' },
+    toilet:      { label: '便器',       w: 400,  h: 700, category: 'equipment' },
+    washbasin:   { label: '手洗い器',   w: 500,  h: 400, category: 'equipment' },
+    microwave:   { label: '電子レンジ', w: 450,  h: 350, category: 'equipment' },
+    gasstove:    { label: 'ガスコンロ', w: 560,  h: 450, category: 'equipment' },
+    choritai:    { label: '調理台',     w: 900,  h: 600, category: 'equipment' },
   };
 
   /* 扉・戸(開き勝手の設定を持つ建具)の種類 */
