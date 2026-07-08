@@ -392,14 +392,16 @@
     return out;
   }
 
-  /* 内壁の帯(厚みぶんの1枚の多角形。絶対mm)。左右にオフセットした2本の線を
-   * つないで1つの閉じた形にする(平面図の壁の塗りに使う)。求積には使わない。 */
-  function wallBandAbs(wall) {
+  /* 内壁の輪郭(絶対mm)。中心線から厚みの半分ずつ左右にオフセットした2本の線を返す。
+   * 平面図には塗りつぶさず、この2本の線だけを描く(建築図面の壁の二重線表現)。
+   * 求積には使わない。 */
+  function wallOutlineAbs(wall) {
     const abs = (wall.points || []).map((p) => ({ x: wall.x + p.x, y: wall.y + p.y }));
     const t = wall.thickness || 0;
-    const left = offsetOpenPolylineAbs(abs, t / 2);
-    const right = offsetOpenPolylineAbs(abs, -t / 2);
-    return left.concat(right.slice().reverse());
+    return {
+      left: offsetOpenPolylineAbs(abs, t / 2),
+      right: offsetOpenPolylineAbs(abs, -t / 2),
+    };
   }
 
   /* 壁芯線の頂点列(絶対mm)。内法入力なら壁厚/2だけ外側に広げる。 */
@@ -617,7 +619,7 @@
     isPillarRegion, areaUseForRegion, isPremisesAreaBoundary, hasPremisesAreaBoundary, hasAnyAreaBoundary,
     pointInRegion, pillarsInRegion, pillarDeductions, regionNetAreaSqm,
     polygonAbsPoints, polygonCalc, polygonEdgesM, polygonPointsM,
-    offsetPolygonAbs, offsetOpenPolylineAbs, wallBandAbs,
+    offsetPolygonAbs, offsetOpenPolylineAbs, wallOutlineAbs,
     premiseCenterlineAbs, premiseWallPolysAbs, premiseRegionLike, premiseCalc,
     furnitureGroups, furnitureNumberMap, furnKey,
     summary, sightlineWarnings, kyakushitsuSizeWarnings, KYAKUSHITSU_MIN_SQM,

@@ -1117,21 +1117,10 @@
     const inner = wp.inner.map((p) => worldToScreen(p.x, p.y));
     const outer = wp.outer.map((p) => worldToScreen(p.x, p.y));
     ctx.save();
-    // 壁の帯(外側の輪郭と内側の輪郭で囲まれた部分)
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (let i = 1; i < outer.length; i++) ctx.lineTo(outer[i].x, outer[i].y);
-    ctx.closePath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (let i = 1; i < inner.length; i++) ctx.lineTo(inner[i].x, inner[i].y);
-    ctx.closePath();
-    ctx.globalAlpha = opts.muted ? 0.25 : 0.8;
-    ctx.fillStyle = '#b0bec5';
-    ctx.fill('evenodd');
-    ctx.globalAlpha = 1;
-    // 内外の輪郭線
+    // 壁の厚み分だけ離した黒い実線2本(二重線)。塗りつぶしはしない。
+    ctx.globalAlpha = opts.muted ? 0.35 : 1;
     ctx.lineWidth = opts.selected ? 2.5 : 1.5;
-    ctx.strokeStyle = opts.selected ? '#d32f2f' : (opts.muted ? '#9aa0a6' : '#37474f');
+    ctx.strokeStyle = opts.selected ? '#d32f2f' : '#000';
     for (const poly of [outer, inner]) {
       ctx.beginPath();
       ctx.moveTo(poly[0].x, poly[0].y);
@@ -1139,6 +1128,7 @@
       ctx.closePath();
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
     // ラベル(外周の左上の外側)
     if (!opts.muted) {
       const top = outer.reduce((a, p) => (p.y < a.y ? p : a), outer[0]);
@@ -1163,23 +1153,25 @@
     ctx.restore();
   }
 
-  /* 内壁(部屋を仕切る壁)を帯(厚みぶんの1枚の形)で塗りつぶして描く。
-   * 見た目だけの壁で、営業所外周の壁芯とは違い求積(面積計算)には使わない。 */
+  /* 内壁(部屋を仕切る壁)を、厚み分だけ離した黒い実線2本(二重線)で描く。
+   * 塗りつぶしはしない。見た目だけの壁で、営業所外周の壁芯とは違い
+   * 求積(面積計算)には使わない。 */
   function drawWall(ctx, w, opts) {
     if (!w || (w.points || []).length < 2) return;
-    const band = global.Geometry.wallBandAbs(w).map((p) => worldToScreen(p.x, p.y));
+    const outline = global.Geometry.wallOutlineAbs(w);
+    const left = outline.left.map((p) => worldToScreen(p.x, p.y));
+    const right = outline.right.map((p) => worldToScreen(p.x, p.y));
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(band[0].x, band[0].y);
-    for (let i = 1; i < band.length; i++) ctx.lineTo(band[i].x, band[i].y);
-    ctx.closePath();
-    ctx.globalAlpha = opts.muted ? 0.25 : 0.8;
-    ctx.fillStyle = '#b0bec5';
-    ctx.fill();
+    ctx.globalAlpha = opts.muted ? 0.35 : 1;
+    ctx.lineWidth = opts.selected ? 2.5 : 1.5;
+    ctx.strokeStyle = opts.selected ? '#d32f2f' : '#000';
+    for (const line of [left, right]) {
+      ctx.beginPath();
+      ctx.moveTo(line[0].x, line[0].y);
+      for (let i = 1; i < line.length; i++) ctx.lineTo(line[i].x, line[i].y);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
-    ctx.lineWidth = opts.selected ? 2.5 : 1;
-    ctx.strokeStyle = opts.selected ? '#d32f2f' : (opts.muted ? '#9aa0a6' : '#37474f');
-    ctx.stroke();
     if (opts.selected) {
       const abs = global.Geometry.polygonAbsPoints(w);
       for (const p of abs) {
