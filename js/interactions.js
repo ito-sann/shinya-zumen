@@ -40,11 +40,13 @@
     };
   }
 
-  /* 多角形の作図を開始する。クリックで頂点を置き、最初の点をクリック
-   * (またはダブルクリック / Enter)で確定、Esc で中止。
-   * 確定すると onDone(絶対mm座標の頂点列) が呼ばれる。 */
-  function beginPolygon(state, onDone) {
-    state.draft = { points: [], cursor: null, onDone };
+  /* 多角形(または開いた折れ線)の作図を開始する。クリックで頂点を置き、
+   * 最初の点をクリック(またはダブルクリック / Enter)で確定、Esc で中止。
+   * 確定すると onDone(絶対mm座標の頂点列) が呼ばれる。
+   * opts.minPoints … 確定に必要な最低点数(既定3=区画・備品用。内壁は2でよい)。 */
+  function beginPolygon(state, onDone, opts) {
+    opts = opts || {};
+    state.draft = { points: [], cursor: null, onDone, minPoints: opts.minPoints || 3 };
   }
   function cancelPolygon(state) {
     state.draft = null;
@@ -70,7 +72,7 @@
         pts[0].x === pts[pts.length - 1].x && pts[0].y === pts[pts.length - 1].y) {
       pts.pop();
     }
-    if (pts.length >= 3) d.onDone(pts);
+    if (pts.length >= (d.minPoints || 3)) d.onDone(pts);
   }
 
   function localRotatedPoint(wx, wy, el) {
@@ -203,6 +205,7 @@
       if (layer === 'lighting' && isAreaBoundaryLine(el)) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
+    if (kind === 'walls') return layer !== 'furnviews';
     if (kind === 'fittings') return global.Render.fittingVisibleOnLayer(el, layer);
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
     if (kind === 'fixtures') return !!vis.fixtures;
@@ -236,6 +239,12 @@
       } else if (item.kind === 'regions') {
         const hit = el.shape === 'polygon' ? inPolygon(wx, wy, el) : inRotatedRect(wx, wy, el);
         if (hit) return el;
+      } else if (item.kind === 'walls') {
+        const pts = global.Geometry.polygonAbsPoints(el);
+        const tol = Math.max((el.thickness || 100) / 2, 12 / global.Render.view.zoom);
+        for (let i = 0; i < pts.length - 1; i++) {
+          if (distToSegment(wx, wy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y) <= tol) return el;
+        }
       }
     }
     return null;
@@ -279,7 +288,7 @@
       if (!state.selectedId) return null;
       const found = global.Model.findById(project, state.selectedId);
       if (!found || found.element.shape !== 'polygon' ||
-          (found.kind !== 'regions' && found.kind !== 'premise' && found.kind !== 'furniture')) return null;
+          (found.kind !== 'regions' && found.kind !== 'premise' && found.kind !== 'furniture' && found.kind !== 'walls')) return null;
       const r = found.element;
       const pts = global.Geometry.polygonAbsPoints(r);
       for (let i = 0; i < r.points.length; i++) {
@@ -592,7 +601,7 @@
 
     // ダブルクリックでも多角形を確定できる(3点以上)
     const onDblClick = () => {
-      if (state.draft && state.draft.points.length >= 3) {
+      if (state.draft && state.draft.points.length >= (state.draft.minPoints || 3)) {
         finishDraft(state);
         onChange();
       }
@@ -619,7 +628,7 @@
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
       // 作図中: Enter で確定 / Esc で中止
       if (state.draft) {
-        if (e.key === 'Enter' && state.draft.points.length >= 3) {
+        if (e.key === 'Enter' && state.draft.points.length >= (state.draft.minPoints || 3)) {
           finishDraft(state);
           onChange();
         } else if (e.key === 'Escape') {

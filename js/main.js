@@ -485,6 +485,26 @@
         refresh();
       }
     };
+    // 内壁(部屋を仕切る壁)の作図。区画の多角形と同じ操作だが、閉じなくてよい(2点から確定可)。
+    // 作図中にもう一度押すと: 2点以上なら確定、未満なら中止。
+    $('btnDrawWall').onclick = () => {
+      if (state.draft) {
+        if (state.draftKind !== 'wall') return; // 他の作図中は無効
+        if (state.draft.points.length >= (state.draft.minPoints || 2)) I.finishPolygon(state);
+        else I.cancelPolygon(state);
+        draw();
+        return;
+      }
+      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
+      state.draftKind = 'wall';
+      const thickness = parseInt($('wallThickness').value, 10) || 100;
+      I.beginPolygon(state, (pts) => {
+        const w = M.addPolygonWall(project, pts, thickness);
+        state.selectedId = w.id;
+        refresh(); showProps(w);
+      }, { minPoints: 2 });
+      draw();
+    };
     // 種類を変えたら、その種類で選べる姿図スタイルに並べ替える
     $('furnKind').onchange = populateFurnStyles;
     // 備品姿図のカードを自動整列に戻す(手動で動かした位置をすべて消す)
@@ -869,6 +889,9 @@
     });
     (project.regions || []).forEach((r) => {
       push('区画', 'regions', r, r.label || (M.REGION_TYPES[r.type] || {}).label || '区画', shapeLabel(r.shape || 'rect'));
+    });
+    (project.walls || []).forEach((w, i) => {
+      push('内壁', 'walls', w, w.label || `内壁${i + 1}`, `厚${w.thickness || 100}mm`);
     });
     (project.furniture || []).forEach((f) => push('備品', 'furniture', f, f.label || (M.FURNITURE_CATALOG[f.kind] || {}).label || '備品', `${G.fmtM(f.w)}×${G.fmtM(f.h)}m`));
     (project.fittings || []).forEach((g) => push('建具・壁', 'fittings', g, g.label || (M.FITTING_CATALOG[g.kind] || {}).label || '建具', `${G.fmtM(g.w)}m`));
@@ -1401,6 +1424,18 @@
       const area = G.regionAreaSqm(el);
       html += `<div class="prop-row"><span>面積</span><b id="propArea">${area.toFixed(4)} ㎡</b></div>`;
     }
+    if (kind === 'walls') {
+      // 内壁: 見た目だけの壁(区画の求積には使わない)。頂点はキャンバス上でドラッグでも修正可。
+      html += propNum('壁厚(mm)', 'thickness', el.thickness || 100);
+      html += '<p class="muted">見た目だけの壁で、区画の面積計算(求積表)には影響しません。頂点はキャンバス上でドラッグでも動かせます。</p>';
+      const absPts = G.polygonAbsPoints(el);
+      el.points.forEach((p, i) => {
+        const abs = absPts[i] || { x: el.x + p.x, y: el.y + p.y };
+        html += `<div class="prop-row vertex-row"><span>P${i + 1}</span>
+          <input type="number" step="10" data-vx="${i}" value="${Math.round(abs.x)}" title="X(mm)">
+          <input type="number" step="10" data-vy="${i}" value="${Math.round(abs.y)}" title="Y(mm)"></div>`;
+      });
+    }
     if (kind === 'premise') {
       // 営業所外周は1つだけなので複製はなし
       html += `<button class="btn small danger" id="btnDel">この要素を削除</button>`;
@@ -1691,6 +1726,7 @@
   function kindLabel(el, kind) {
     if (kind === 'regions') return (M.REGION_TYPES[el.type] || {}).label || '区画';
     if (kind === 'premise') return '営業所外周(壁芯)';
+    if (kind === 'walls') return '内壁';
     if (kind === 'furniture') return '備品';
     if (kind === 'fittings') return '建具・設備';
     if (kind === 'fixtures') return '照明・音響設備';

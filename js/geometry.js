@@ -355,6 +355,53 @@
     return out;
   }
 
+  /* 折れ線(開いたパス)を delta(mm) だけ左右どちらかにずらした頂点列を返す。
+   * 営業所外周と違って閉じていないので、両端は単純にその区間の法線方向へ
+   * ずらすだけ(バットキャップ)、途中の頂点は隣り合う辺のマイター結合にする。 */
+  function offsetOpenPolylineAbs(pts, delta) {
+    const n = pts.length;
+    if (n < 2) return pts.map((p) => ({ x: p.x, y: p.y }));
+    const normals = [];
+    for (let i = 0; i < n - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const l = Math.hypot(dx, dy) || 1;
+      normals.push({ x: dy / l, y: -dx / l });
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      if (i === 0) {
+        out.push({ x: pts[0].x + normals[0].x * delta, y: pts[0].y + normals[0].y * delta });
+      } else if (i === n - 1) {
+        out.push({ x: pts[i].x + normals[i - 1].x * delta, y: pts[i].y + normals[i - 1].y * delta });
+      } else {
+        const nPrev = normals[i - 1], nCur = normals[i];
+        const a1 = { x: pts[i - 1].x + nPrev.x * delta, y: pts[i - 1].y + nPrev.y * delta };
+        const d1 = { x: pts[i].x - pts[i - 1].x, y: pts[i].y - pts[i - 1].y };
+        const a2 = { x: pts[i].x + nCur.x * delta, y: pts[i].y + nCur.y * delta };
+        const d2 = { x: pts[i + 1].x - pts[i].x, y: pts[i + 1].y - pts[i].y };
+        const det = d1.x * d2.y - d1.y * d2.x;
+        if (Math.abs(det) < 1e-9) {
+          out.push({ x: pts[i].x + nCur.x * delta, y: pts[i].y + nCur.y * delta });
+        } else {
+          const t = ((a2.x - a1.x) * d2.y - (a2.y - a1.y) * d2.x) / det;
+          out.push({ x: a1.x + d1.x * t, y: a1.y + d1.y * t });
+        }
+      }
+    }
+    return out;
+  }
+
+  /* 内壁の帯(厚みぶんの1枚の多角形。絶対mm)。左右にオフセットした2本の線を
+   * つないで1つの閉じた形にする(平面図の壁の塗りに使う)。求積には使わない。 */
+  function wallBandAbs(wall) {
+    const abs = (wall.points || []).map((p) => ({ x: wall.x + p.x, y: wall.y + p.y }));
+    const t = wall.thickness || 0;
+    const left = offsetOpenPolylineAbs(abs, t / 2);
+    const right = offsetOpenPolylineAbs(abs, -t / 2);
+    return left.concat(right.slice().reverse());
+  }
+
   /* 壁芯線の頂点列(絶対mm)。内法入力なら壁厚/2だけ外側に広げる。 */
   function premiseCenterlineAbs(premise) {
     const abs = (premise.points || []).map((p) => ({ x: premise.x + p.x, y: premise.y + p.y }));
@@ -535,6 +582,10 @@
       const p = project.premise;
       consider(p.x - t, p.y - t); consider(p.x + p.w + t, p.y + p.h + t);
     }
+    for (const w of (project.walls || [])) {
+      const t = (w.thickness || 0) / 2;
+      consider(w.x - t, w.y - t); consider(w.x + w.w + t, w.y + w.h + t);
+    }
     for (const f of project.furniture) {
       consider(f.x, f.y); consider(f.x + f.w, f.y + f.h);
     }
@@ -566,7 +617,8 @@
     isPillarRegion, areaUseForRegion, isPremisesAreaBoundary, hasPremisesAreaBoundary, hasAnyAreaBoundary,
     pointInRegion, pillarsInRegion, pillarDeductions, regionNetAreaSqm,
     polygonAbsPoints, polygonCalc, polygonEdgesM, polygonPointsM,
-    offsetPolygonAbs, premiseCenterlineAbs, premiseWallPolysAbs, premiseRegionLike, premiseCalc,
+    offsetPolygonAbs, offsetOpenPolylineAbs, wallBandAbs,
+    premiseCenterlineAbs, premiseWallPolysAbs, premiseRegionLike, premiseCalc,
     furnitureGroups, furnitureNumberMap, furnKey,
     summary, sightlineWarnings, kyakushitsuSizeWarnings, KYAKUSHITSU_MIN_SQM,
     fixtureSummary, boundingBox,

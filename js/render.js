@@ -1163,6 +1163,38 @@
     ctx.restore();
   }
 
+  /* 内壁(部屋を仕切る壁)を帯(厚みぶんの1枚の形)で塗りつぶして描く。
+   * 見た目だけの壁で、営業所外周の壁芯とは違い求積(面積計算)には使わない。 */
+  function drawWall(ctx, w, opts) {
+    if (!w || (w.points || []).length < 2) return;
+    const band = global.Geometry.wallBandAbs(w).map((p) => worldToScreen(p.x, p.y));
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(band[0].x, band[0].y);
+    for (let i = 1; i < band.length; i++) ctx.lineTo(band[i].x, band[i].y);
+    ctx.closePath();
+    ctx.globalAlpha = opts.muted ? 0.25 : 0.8;
+    ctx.fillStyle = '#b0bec5';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = opts.selected ? 2.5 : 1;
+    ctx.strokeStyle = opts.selected ? '#d32f2f' : (opts.muted ? '#9aa0a6' : '#37474f');
+    ctx.stroke();
+    if (opts.selected) {
+      const abs = global.Geometry.polygonAbsPoints(w);
+      for (const p of abs) {
+        const s = worldToScreen(p.x, p.y);
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#d32f2f';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.rect(s.x - 4, s.y - 4, 8, 8);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   /* 求積図: 壁芯線(実線)と辺長・頂点番号を描く。
    * 頂点番号(P1, P2 …)は壁芯の座標求積表と対応する。 */
   function drawPremiseCenterline(ctx, project) {
@@ -1732,6 +1764,11 @@
         if (currentLayer === 'lighting') continue;
         if (!visibleRegionIds.has(el.id)) continue;
         drawVisibleRegion(el);
+      } else if (item.kind === 'walls') {
+        drawWall(ctx, el, {
+          selected: state.selectedId === el.id,
+          muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki',
+        });
       } else if (item.kind === 'fittings') {
         if (fittingVisibleOnLayer(el, currentLayer)) drawFitting(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'furniture') {
