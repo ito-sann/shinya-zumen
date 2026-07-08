@@ -668,58 +668,114 @@
       ctx.textBaseline = 'top';
       ctx.fillText('出入口', 0, h / 2 + wpx(50));
     } else if (g.kind === 'toilet') {
-      // 洋式便器: 奥にタンク(四角)、手前に便座(楕円)
+      // 洋式便器: 奥にタンク(角丸)+上面中央のフラッシュボタン、手前に便座(座面の輪を二重楕円で表現)
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      const tankH = h * 0.25;
-      ctx.fillRect(-w / 2, -h / 2, w, tankH);
-      ctx.strokeRect(-w / 2, -h / 2, w, tankH);
-      const bowlCy = -h / 2 + tankH + (h - tankH) / 2;
-      ctx.beginPath();
-      ctx.ellipse(0, bowlCy, w / 2 * 0.85, (h - tankH) / 2 * 0.9, 0, 0, Math.PI * 2);
+      const tankH = h * 0.24;
+      roundRectPath(ctx, -w / 2, -h / 2, w, tankH, Math.min(w, tankH) * 0.25);
       ctx.fill(); ctx.stroke();
+      const nubW = w * 0.18, nubH = tankH * 0.45;
+      ctx.fillRect(-nubW / 2, -h / 2 - nubH * 0.45, nubW, nubH);
+      ctx.strokeRect(-nubW / 2, -h / 2 - nubH * 0.45, nubW, nubH);
+      const bowlCy = -h / 2 + tankH + (h - tankH) / 2;
+      const bowlRx = w / 2 * 0.86, bowlRy = (h - tankH) / 2 * 0.92;
+      ctx.beginPath();
+      ctx.ellipse(0, bowlCy, bowlRx, bowlRy, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, bowlCy + bowlRy * 0.06, bowlRx * 0.66, bowlRy * 0.7, 0, 0, Math.PI * 2);
+      ctx.stroke();
       labelBelow(ctx, g, h, line, '便器');
     } else if (g.kind === 'washbasin') {
-      // 手洗い器: 楕円の洗面ボウル + 奥中央に蛇口
+      // 手洗い器: 角丸の四角いボウル + 中央に排水口 + 奥に水栓の丸2つ
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, w / 2 * 0.9, h / 2 * 0.8, 0, 0, Math.PI * 2);
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.22);
       ctx.fill(); ctx.stroke();
       ctx.beginPath();
-      ctx.arc(0, -h / 2 * 0.5, Math.max(wpx(30), w * 0.05), 0, Math.PI * 2);
+      ctx.ellipse(0, h * 0.14, w * 0.1, h * 0.08, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      const fr = Math.max(wpx(20), Math.min(w, h) * 0.07);
+      ctx.beginPath();
+      ctx.arc(-w * 0.16, -h / 2 * 0.6, fr, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(w * 0.16, -h / 2 * 0.6, fr, 0, Math.PI * 2);
       ctx.stroke();
       labelBelow(ctx, g, h, line, '手洗い器');
     } else if (g.kind === 'microwave') {
-      // 電子レンジ: 本体の四角 + 内側にひとまわり小さい扉窓
+      // 電子レンジ: 本体(角丸) + 扉窓(メッシュ線) + 操作パネル(ボタン2つ)
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      const pad = Math.min(w, h) * 0.16;
-      ctx.strokeRect(-w / 2 + pad, -h / 2 + pad, w - pad * 2, h - pad * 2.6);
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.08);
+      ctx.fill(); ctx.stroke();
+      const panelW = w * 0.24;
+      const pad = Math.min(w, h) * 0.12;
+      const doorX0 = -w / 2 + pad, doorX1 = w / 2 - panelW - pad * 0.6;
+      const doorY0 = -h / 2 + pad, doorY1 = h / 2 - pad;
+      ctx.strokeRect(doorX0, doorY0, doorX1 - doorX0, doorY1 - doorY0);
+      for (let i = 1; i <= 3; i++) {
+        const my = doorY0 + (doorY1 - doorY0) * (i / 4);
+        ctx.beginPath();
+        ctx.moveTo(doorX0 + wpx(20), my);
+        ctx.lineTo(doorX1 - wpx(20), my);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - panelW, -h / 2);
+      ctx.lineTo(w / 2 - panelW, h / 2);
+      ctx.stroke();
+      const bw = panelW * 0.55, bh = h * 0.13;
+      ctx.strokeRect(w / 2 - panelW / 2 - bw / 2, -h * 0.24, bw, bh);
+      ctx.strokeRect(w / 2 - panelW / 2 - bw / 2, h * 0.1, bw, bh);
       labelBelow(ctx, g, h, line, '電子レンジ');
     } else if (g.kind === 'gasstove') {
-      // ガスコンロ: 本体の四角 + バーナー(丸)2つ
+      // ガスコンロ: 本体(角丸) + 五徳つきバーナー2つ
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      const r = Math.min(w, h) * 0.22;
-      ctx.beginPath();
-      ctx.arc(-w * 0.22, 0, r, 0, Math.PI * 2);
-      ctx.arc(w * 0.22, 0, r, 0, Math.PI * 2);
-      ctx.stroke();
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.06);
+      ctx.fill(); ctx.stroke();
+      const r = Math.min(w, h) * 0.24;
+      const burner = (cx, cy) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
+        ctx.stroke();
+        for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * r * 0.55, cy + Math.sin(a) * r * 0.55);
+          ctx.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95);
+          ctx.stroke();
+        }
+      };
+      burner(-w * 0.24, 0);
+      burner(w * 0.24, 0);
       labelBelow(ctx, g, h, line, 'ガスコンロ');
     } else if (g.kind === 'choritai') {
-      // 調理台: ただの四角(天板)
+      // 調理台: 天板のふち取り(二重線)で厚みを表現
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
       ctx.fillRect(-w / 2, -h / 2, w, h);
       ctx.strokeRect(-w / 2, -h / 2, w, h);
+      const inset = Math.min(w, h) * 0.1;
+      ctx.strokeRect(-w / 2 + inset, -h / 2 + inset, w - inset * 2, h - inset * 2);
       labelBelow(ctx, g, h, line, '調理台');
     }
     ctx.restore();
+  }
+
+  /* 角丸四角のパス(中心原点の座標系。x,yは左上、w,hは正の値) */
+  function roundRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.max(0, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
   }
 
   /* 設備アイコンの下にラベルを1行表示する(共通処理) */
