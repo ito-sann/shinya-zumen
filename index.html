@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.57.0">
+  <link rel="stylesheet" href="css/style.css?v=1.58.0">
 </head>
 <body>
   <header class="topbar">
@@ -106,8 +106,8 @@
       <section class="group" data-layers="plan kyuseki">
         <h3>内壁を追加</h3>
         <label class="field">壁の厚さ <input type="number" id="wallThickness" value="100" step="10" min="10"> mm</label>
-        <button id="btnDrawWall" class="btn block">内壁を折れ線で描く</button>
-        <p class="muted">部屋を仕切る壁を、キャンバス上で角をクリックしてたどって描けます。2点(直線1本)から確定でき、輪郭のように閉じなくてもOKです。最初の点をクリック・ダブルクリック・Enterで確定。見た目だけの壁で、区画の面積計算(求積表)には影響しません。</p>
+        <button id="btnDrawWall" class="btn block">内壁を2点で描く</button>
+        <p class="muted">寸法線と同じ操作感で、キャンバス上の2点をクリックするとその間に壁ができます。曲がった壁が必要なときは、2点ずつ複数回に分けて描いてください。見た目だけの壁で、区画の面積計算(求積表)には影響しません。</p>
       </section>
 
       <section class="group" data-layers="plan">
@@ -318,13 +318,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.57.0"></script>
-  <script src="js/geometry.js?v=1.57.0"></script>
-  <script src="js/render.js?v=1.57.0"></script>
-  <script src="js/interactions.js?v=1.57.0"></script>
-  <script src="js/print.js?v=1.57.0"></script>
-  <script src="js/forms.js?v=1.57.0"></script>
-  <script src="js/main.js?v=1.57.0"></script>
+  <script src="js/model.js?v=1.58.0"></script>
+  <script src="js/geometry.js?v=1.58.0"></script>
+  <script src="js/render.js?v=1.58.0"></script>
+  <script src="js/interactions.js?v=1.58.0"></script>
+  <script src="js/print.js?v=1.58.0"></script>
+  <script src="js/forms.js?v=1.58.0"></script>
+  <script src="js/main.js?v=1.58.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

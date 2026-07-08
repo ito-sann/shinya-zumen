@@ -391,6 +391,13 @@
           }
         }
         pts.push({ x: snap(w.x), y: snap(w.y) });
+        // 内壁は寸法線と同じ操作感にするため、2点目を置いたら即確定する
+        // (角を増やしたいときは、2点ずつ複数回に分けて描く)。
+        if (state.draftKind === 'wall' && pts.length >= (state.draft.minPoints || 2)) {
+          finishDraft(state);
+          onChange();
+          return;
+        }
         onChange();
         return;
       }

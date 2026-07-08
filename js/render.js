@@ -1341,12 +1341,14 @@
     ctx.globalAlpha = opts.muted ? 0.35 : 1;
     ctx.lineWidth = opts.selected ? 2.5 : 1.5;
     ctx.strokeStyle = opts.selected ? '#d32f2f' : '#000';
-    for (const line of [left, right]) {
-      ctx.beginPath();
-      ctx.moveTo(line[0].x, line[0].y);
-      for (let i = 1; i < line.length; i++) ctx.lineTo(line[i].x, line[i].y);
-      ctx.stroke();
-    }
+    // 左右のオフセット線を1本の閉じたパスにする(左→端→右を逆順→端を閉じる)ことで、
+    // 両端が切れずに四角くつながった帯の輪郭になる。
+    ctx.beginPath();
+    ctx.moveTo(left[0].x, left[0].y);
+    for (let i = 1; i < left.length; i++) ctx.lineTo(left[i].x, left[i].y);
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+    ctx.closePath();
+    ctx.stroke();
     ctx.globalAlpha = 1;
     if (opts.selected) {
       const abs = global.Geometry.polygonAbsPoints(w);
