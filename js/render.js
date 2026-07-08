@@ -1404,16 +1404,6 @@
     ctx.closePath();
     ctx.stroke();
     ctx.restore();
-    drawPolygonDims(ctx, rl); // 辺長(m)と P1, P2 … を共通処理で付ける
-    // 凡例的なラベル
-    const top = pts.reduce((a, p) => (p.y < a.y ? p : a), pts[0]);
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.font = `bold ${fontPx(260)}px sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('壁芯線(営業所求積)', top.x + wpx(300), top.y - wpx(420));
-    ctx.restore();
   }
 
   /* ---- 備品姿図(正面図・側面図) ---- */
