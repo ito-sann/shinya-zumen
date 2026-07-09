@@ -835,30 +835,20 @@
       ctx.stroke();
       labelBelow(ctx, g, h, line, '手洗い器');
     } else if (g.kind === 'microwave') {
-      // 電子レンジ: 本体(角丸) + 扉窓(メッシュ線) + 操作パネル(ボタン2つ)
+      // 電子レンジ(CAD図を模倣): 本体の四角 + 手前寄りの太い継ぎ目線と、その下の細い帯
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.08);
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.04);
       ctx.fill(); ctx.stroke();
-      const panelW = w * 0.24;
-      const pad = Math.min(w, h) * 0.12;
-      const doorX0 = -w / 2 + pad, doorX1 = w / 2 - panelW - pad * 0.6;
-      const doorY0 = -h / 2 + pad, doorY1 = h / 2 - pad;
-      ctx.strokeRect(doorX0, doorY0, doorX1 - doorX0, doorY1 - doorY0);
-      for (let i = 1; i <= 3; i++) {
-        const my = doorY0 + (doorY1 - doorY0) * (i / 4);
-        ctx.beginPath();
-        ctx.moveTo(doorX0 + wpx(20), my);
-        ctx.lineTo(doorX1 - wpx(20), my);
-        ctx.stroke();
-      }
+      // 扉の継ぎ目: 手前寄りの太い横線(下に細い帯が残る)
+      const seamY = h / 2 - h * 0.12;
+      ctx.save();
+      ctx.lineWidth = Math.max(2, wpx(15));
       ctx.beginPath();
-      ctx.moveTo(w / 2 - panelW, -h / 2);
-      ctx.lineTo(w / 2 - panelW, h / 2);
+      ctx.moveTo(-w / 2, seamY);
+      ctx.lineTo(w / 2, seamY);
       ctx.stroke();
-      const bw = panelW * 0.55, bh = h * 0.13;
-      ctx.strokeRect(w / 2 - panelW / 2 - bw / 2, -h * 0.24, bw, bh);
-      ctx.strokeRect(w / 2 - panelW / 2 - bw / 2, h * 0.1, bw, bh);
+      ctx.restore();
       labelBelow(ctx, g, h, line, '電子レンジ');
     } else if (g.kind === 'gasstove') {
       // ガスコンロ: 本体(角丸) + 五徳つきバーナー2つ
@@ -893,6 +883,33 @@
       const inset = Math.min(w, h) * 0.1;
       ctx.strokeRect(-w / 2 + inset, -h / 2 + inset, w - inset * 2, h - inset * 2);
       labelBelow(ctx, g, h, line, '調理台');
+    } else if (g.kind === 'sink2') {
+      // 2層シンク(CAD図を模倣): 外形 + 奥の細い縁(水栓台) +
+      // 角丸の槽2つ(それぞれ中央に排水口の二重円)
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.03);
+      ctx.fill(); ctx.stroke();
+      // 奥側の細い縁
+      const ledge = h * 0.10;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2 + ledge);
+      ctx.lineTo(w / 2, -h / 2 + ledge);
+      ctx.stroke();
+      // 槽2つ(左右に並べる)
+      const sp = Math.min(w, h) * 0.07;
+      const bw2 = (w - sp * 3) / 2, bh2 = h - ledge - sp * 2;
+      const by2 = -h / 2 + ledge + sp;
+      for (const bx of [-w / 2 + sp, sp / 2]) {
+        roundRectPath(ctx, bx, by2, bw2, bh2, Math.min(bw2, bh2) * 0.18);
+        ctx.stroke();
+        // 排水口(二重円・槽の中央やや奥寄り)
+        const cx = bx + bw2 / 2, cy = by2 + bh2 / 2 - bh2 * 0.10;
+        const r1 = Math.min(bw2, bh2) * 0.14;
+        ctx.beginPath(); ctx.arc(cx, cy, r1, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, r1 * 0.55, 0, Math.PI * 2); ctx.stroke();
+      }
+      labelBelow(ctx, g, h, line, '2層シンク');
     } else if (g.kind === 'rangehood') {
       // 換気扇・レンジフード: 天井付けなので破線の枠 + ベントの斜めスリット
       ctx.strokeStyle = line;

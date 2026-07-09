@@ -250,6 +250,7 @@
     toilet:      { label: '洋式便器',   w: 430,  h: 800, category: 'equipment' },
     toiletJp:    { label: '和式便器',   w: 400,  h: 650, category: 'equipment' },
     urinal:      { label: '小便器',     w: 350,  h: 400, category: 'equipment' },
+    sink2:       { label: '2層シンク',  w: 1200, h: 600, category: 'equipment' },
     washbasin:   { label: '手洗い器',   w: 500,  h: 400, category: 'equipment' },
     microwave:   { label: '電子レンジ', w: 450,  h: 350, category: 'equipment' },
     gasstove:    { label: 'ガスコンロ', w: 560,  h: 450, category: 'equipment' },
