@@ -531,6 +531,27 @@
       }, { minPoints: 2 });
       draw();
     };
+    // 自由な線(折れ線)の作図。囲わなくてよく、2点なら直線・3点以上なら折れ線。
+    // ダブルクリックかEnterで確定。作図中にもう一度押すと: 2点以上なら確定、未満なら中止。
+    $('btnDrawLine').onclick = () => {
+      if (state.draft) {
+        if (state.draftKind !== 'line') return; // 他の作図中は無効
+        if (state.draft.points.length >= 2) I.finishPolygon(state);
+        else I.cancelPolygon(state);
+        draw();
+        return;
+      }
+      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
+      state.draftKind = 'line';
+      const color = $('lineColor').value;
+      const style = $('lineStyle').value;
+      I.beginPolygon(state, (pts) => {
+        const l = M.addPolyline(project, pts, color, style);
+        state.selectedId = l.id;
+        refresh(); showProps(l);
+      }, { minPoints: 2 });
+      draw();
+    };
     // 種類を変えたら、その種類で選べる姿図スタイルに並べ替える
     $('furnKind').onchange = populateFurnStyles;
     // 備品姿図のカードを自動整列に戻す(手動で動かした位置をすべて消す)
@@ -929,6 +950,10 @@
     });
     (project.walls || []).forEach((w, i) => {
       push('内壁', 'walls', w, w.label || `内壁${i + 1}`, `厚${w.thickness || 100}mm`);
+    });
+    (project.lines || []).forEach((l, i) => {
+      const styleLabel = { solid: '実線', dotted: '点線', dashed: '破線' }[l.lineStyle] || '実線';
+      push('線', 'lines', l, `線 ${i + 1}`, styleLabel);
     });
     (project.furniture || []).forEach((f) => push('備品', 'furniture', f, f.label || (M.FURNITURE_CATALOG[f.kind] || {}).label || '備品', `${G.fmtM(f.w)}×${G.fmtM(f.h)}m`));
     (project.fittings || []).forEach((g) => {
@@ -1499,6 +1524,32 @@
           <input type="number" step="10" data-vy="${i}" value="${Math.round(abs.y)}" title="Y(mm)"></div>`;
       });
     }
+    if (kind === 'lines') {
+      // 自由な線: 線種・線色・表示する図面を選べる。囲わない見た目だけの線。
+      html += `<div class="prop-row"><span>線種</span><select id="propLineStyle">
+        <option value="solid"${(el.lineStyle || 'solid') === 'solid' ? ' selected' : ''}>実線</option>
+        <option value="dotted"${el.lineStyle === 'dotted' ? ' selected' : ''}>点線</option>
+        <option value="dashed"${el.lineStyle === 'dashed' ? ' selected' : ''}>破線</option>
+      </select></div>`;
+      html += `<div class="prop-row"><span>線色</span><span class="font-ctrl">
+        <input type="color" id="propLineColor" value="${el.color || '#333333'}">
+      </span></div>`;
+      const lineLayers = Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'kyuseki'];
+      html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
+      [['plan', '平面図'], ['kyuseki', '求積図']].forEach(([layer, label]) => {
+        html += `<label class="check-row"><input type="checkbox" data-line-layer="${layer}" ${lineLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
+      });
+      html += '</div></div>';
+      html += `<div class="add-row"><button class="btn small" id="btnLineStraighten">水平/垂直に補正</button></div>`;
+      html += '<p class="muted">囲わない見た目だけの線で、面積計算には影響しません。頂点はキャンバス上でドラッグでも動かせます。</p>';
+      const absPts = G.polygonAbsPoints(el);
+      el.points.forEach((p, i) => {
+        const abs = absPts[i] || { x: el.x + p.x, y: el.y + p.y };
+        html += `<div class="prop-row vertex-row"><span>P${i + 1}</span>
+          <input type="number" step="10" data-vx="${i}" value="${Math.round(abs.x)}" title="X(mm)">
+          <input type="number" step="10" data-vy="${i}" value="${Math.round(abs.y)}" title="Y(mm)"></div>`;
+      });
+    }
     if (kind === 'premise') {
       // 営業所外周は1つだけなので複製はなし
       html += `<button class="btn small danger" id="btnDel">この要素を削除</button>`;
@@ -1798,7 +1849,30 @@
       }
       refresh(); showProps(el);
     };
-    const wallStraighten = box.querySelector('#btnWallStraighten');
+    // 線種・線色・表示図面(自由な線)
+    const lineStyleSel = box.querySelector('#propLineStyle');
+    if (lineStyleSel) lineStyleSel.onchange = (e) => { el.lineStyle = e.target.value; refresh(); };
+    const lineColorInp = box.querySelector('#propLineColor');
+    if (lineColorInp) lineColorInp.oninput = (e) => { el.color = e.target.value; refresh(); };
+    const lineLayerChecks = Array.from(box.querySelectorAll('[data-line-layer]'));
+    if (lineLayerChecks.length) {
+      lineLayerChecks.forEach((inp) => {
+        inp.onchange = () => {
+          const layers = lineLayerChecks.filter((check) => check.checked).map((check) => check.dataset.lineLayer);
+          if (!layers.length) {
+            inp.checked = true; // 全部外すと図面から消えて選べなくなるので最低1つは残す
+            return;
+          }
+          el.layers = layers;
+          if (layers.indexOf(R.getLayer()) < 0) {
+            R.setLayer(layers[0]);
+            buildLayerTabs();
+          }
+          refresh(); showProps(el);
+        };
+      });
+    }
+    const wallStraighten = box.querySelector('#btnWallStraighten') || box.querySelector('#btnLineStraighten');
     if (wallStraighten) wallStraighten.onclick = () => {
       // 各頂点を、直前の頂点から見て水平か垂直の近いほうへそろえる
       const abs = G.polygonAbsPoints(el);
@@ -1853,6 +1927,7 @@
     if (kind === 'regions') return (M.REGION_TYPES[el.type] || {}).label || '区画';
     if (kind === 'premise') return '営業所外周(壁芯)';
     if (kind === 'walls') return '内壁';
+    if (kind === 'lines') return '線';
     if (kind === 'furniture') return '備品';
     if (kind === 'fittings') return '建具・設備';
     if (kind === 'fixtures') return '照明・音響設備';

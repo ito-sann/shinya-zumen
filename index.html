@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.74.0">
+  <link rel="stylesheet" href="css/style.css?v=1.75.0">
 </head>
 <body>
   <header class="topbar">
@@ -112,6 +112,29 @@
         <label class="field">壁の厚さ <input type="number" id="wallThickness" value="100" step="10" min="10"> mm</label>
         <button id="btnDrawWall" class="btn block">内壁を2点で描く</button>
         <p class="muted">寸法線と同じ操作感で、キャンバス上の2点をクリックするとその間に壁ができます。曲がった壁が必要なときは、2点ずつ複数回に分けて描いてください。見た目だけの壁で、区画の面積計算(求積表)には影響しません。</p>
+      </section>
+
+      <section class="group" data-layers="plan kyuseki">
+        <h3>線を描く</h3>
+        <div class="size-row">
+          <label>線色
+            <select id="lineColor">
+              <option value="#333333">標準(黒)</option>
+              <option value="#1d4ed8">青</option>
+              <option value="#e53935">赤</option>
+              <option value="#2e7d32">緑</option>
+            </select>
+          </label>
+          <label>線種
+            <select id="lineStyle">
+              <option value="solid">実線</option>
+              <option value="dotted">点線</option>
+              <option value="dashed">破線</option>
+            </select>
+          </label>
+        </div>
+        <button id="btnDrawLine" class="btn block">線を描く(クリックで点を置く)</button>
+        <p class="muted">囲わなくてよい自由な線です。クリックで点を置き、2点なら直線、3点以上なら折れ線に。ダブルクリックかEnterで確定します。面積計算には影響しません。色・線種はあとから「選択中の要素」で変えられます。</p>
       </section>
 
       <section class="group" data-layers="plan">
@@ -243,6 +266,7 @@
           <option value="dimensions">寸法線だけ</option>
           <option value="regions">区画だけ</option>
           <option value="walls">内壁だけ</option>
+          <option value="lines">線だけ</option>
           <option value="furniture">備品だけ</option>
           <option value="fittings">建具・壁だけ</option>
           <option value="fixtures">照明・音響だけ</option>
@@ -322,13 +346,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.74.0"></script>
-  <script src="js/geometry.js?v=1.74.0"></script>
-  <script src="js/render.js?v=1.74.0"></script>
-  <script src="js/interactions.js?v=1.74.0"></script>
-  <script src="js/print.js?v=1.74.0"></script>
-  <script src="js/forms.js?v=1.74.0"></script>
-  <script src="js/main.js?v=1.74.0"></script>
+  <script src="js/model.js?v=1.75.0"></script>
+  <script src="js/geometry.js?v=1.75.0"></script>
+  <script src="js/render.js?v=1.75.0"></script>
+  <script src="js/interactions.js?v=1.75.0"></script>
+  <script src="js/print.js?v=1.75.0"></script>
+  <script src="js/forms.js?v=1.75.0"></script>
+  <script src="js/main.js?v=1.75.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

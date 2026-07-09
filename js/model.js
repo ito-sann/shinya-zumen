@@ -382,6 +382,9 @@
       premise: null,
       regions: [],
       walls: [],
+      /* 自由な線(折れ線)。囲わなくてよい、見た目だけの線。面積計算には使わない。
+       * points は左上(x,y)からの相対座標。color/lineStyle/layers を持つ。 */
+      lines: [],
       furniture: [],
       fittings: [],
       fixtures: [],
@@ -498,6 +501,30 @@
     };
     project.walls.push(wall);
     return wall;
+  }
+
+  /* 自由な線(折れ線)を追加する。pointsAbs は絶対座標(mm)の点列(2点以上)。
+   * 囲わなくてよい見た目だけの線で、面積計算には使わない。 */
+  function addPolyline(project, pointsAbs, color, lineStyle) {
+    const xs = pointsAbs.map((p) => p.x), ys = pointsAbs.map((p) => p.y);
+    const minX = Math.min(...xs), minY = Math.min(...ys);
+    const line = {
+      id: nextId(project, 'l'),
+      label: '線',
+      shape: 'polygon',
+      x: minX,
+      y: minY,
+      points: pointsAbs.map((p) => ({ x: p.x - minX, y: p.y - minY })),
+      w: Math.max(...xs) - minX,
+      h: Math.max(...ys) - minY,
+      rotation: 0,
+      color: color || '#333333',
+      lineStyle: lineStyle || 'solid',
+      layers: ['plan', 'kyuseki'], // 表示する図面(既定は平面図・求積図の両方)
+    };
+    project.lines = project.lines || [];
+    project.lines.push(line);
+    return line;
   }
 
   /* 営業所外周を作成する。pointsAbs は絶対座標(mm)の頂点列(3点以上)。
@@ -641,7 +668,7 @@
       project.premise = null;
       return true;
     }
-    for (const key of ['regions', 'walls', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
+    for (const key of ['regions', 'walls', 'lines', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
       const i = (project[key] || []).findIndex((e) => e.id === id);
       if (i >= 0) { project[key].splice(i, 1); return true; }
     }
@@ -655,15 +682,16 @@
     furniture: 3000,
     fixtures: 4000,
     dimensions: 5000,
+    lines: 5500,
     notes: 6000,
   };
-  const Z_KIND_ORDER = ['regions', 'walls', 'fittings', 'furniture', 'fixtures', 'dimensions', 'notes'];
+  const Z_KIND_ORDER = ['regions', 'walls', 'fittings', 'furniture', 'fixtures', 'dimensions', 'lines', 'notes'];
 
   function findById(project, id) {
     if (project.premise && project.premise.id === id) {
       return { element: project.premise, kind: 'premise' };
     }
-    for (const key of ['regions', 'walls', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
+    for (const key of ['regions', 'walls', 'lines', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
       const e = (project[key] || []).find((e) => e.id === id);
       if (e) return { element: e, kind: key };
     }
@@ -727,7 +755,7 @@
   function duplicateElement(project, id) {
     const found = findById(project, id);
     if (!found || found.kind === 'premise') return null;
-    const prefix = { regions: 'r', walls: 'w', furniture: 'f', fittings: 'g', fixtures: 'x', notes: 'n', dimensions: 'd' }[found.kind];
+    const prefix = { regions: 'r', walls: 'w', lines: 'l', furniture: 'f', fittings: 'g', fixtures: 'x', notes: 'n', dimensions: 'd' }[found.kind];
     const copy = JSON.parse(JSON.stringify(found.element));
     copy.id = nextId(project, prefix);
     const d = 300; // 元の要素と完全に重ならないようにずらす量(mm)
@@ -777,6 +805,7 @@
         });
       });
     project.walls = obj.walls || [];
+    project.lines = obj.lines || [];
     project.furniture = obj.furniture || [];
     project.fittings = obj.fittings || [];
     project.fixtures = obj.fixtures || [];
@@ -865,7 +894,7 @@
     FURNITURE_STYLES, defaultStyle, furniturePreset,
     SIGHTLINE_LIMIT, CHECKLIST_ITEMS,
     todayStr, defaultProject, nextId, nextRegionNumber,
-    addRegion, addPolygonRegion, normalizePolygon, setPremise, addPolygonWall,
+    addRegion, addPolygonRegion, normalizePolygon, setPremise, addPolygonWall, addPolyline,
     addFurniture, addPolygonFurniture, addFitting, addFixture, addNote, addDimension,
     removeById, findById, elementZ, sortedOrderableItems, zOrderPosition, setZOrder, duplicateElement,
     serialize, deserialize,

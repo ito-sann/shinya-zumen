@@ -1547,6 +1547,40 @@
     ctx.restore();
   }
 
+  /* 自由な線(折れ線)をどの図面に表示するか。layers 配列(既定 平面図・求積図)に従う */
+  function lineVisibleOnLayer(l, layer) {
+    if (layer === 'furnviews') return false;
+    const layers = Array.isArray(l.layers) && l.layers.length ? l.layers : ['plan', 'kyuseki'];
+    return layers.indexOf(layer) >= 0;
+  }
+
+  /* 自由な線(折れ線)を描く。囲わない見た目だけの線で、色と線種(実線・点線・破線)を持つ。
+   * 選択中は赤くし、頂点にドラッグ用のハンドルを出す(内壁と同じ操作感)。 */
+  function drawPolyline(ctx, l, opts) {
+    if (!l || (l.points || []).length < 2) return;
+    const pts = global.Geometry.polygonAbsPoints(l).map((p) => worldToScreen(p.x, p.y));
+    ctx.save();
+    ctx.lineWidth = opts.selected ? 2.5 : 1.5;
+    ctx.strokeStyle = opts.selected ? '#d32f2f' : (l.color || '#333');
+    ctx.setLineDash(lineDashFor(l.lineStyle));
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (opts.selected) {
+      for (const s of pts) {
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#d32f2f';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.rect(s.x - 4, s.y - 4, 8, 8);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   /* 求積図: 壁芯線(実線)と辺長・頂点番号を描く。
    * 頂点番号(P1, P2 …)は壁芯の座標求積表と対応する。 */
   function drawPremiseCenterline(ctx, project) {
@@ -2117,6 +2151,10 @@
           selected: state.selectedId === el.id,
           muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki',
         });
+      } else if (item.kind === 'lines') {
+        if (lineVisibleOnLayer(el, currentLayer)) {
+          drawPolyline(ctx, el, { selected: state.selectedId === el.id });
+        }
       } else if (item.kind === 'fittings') {
         if (fittingVisibleOnLayer(el, currentLayer)) drawFitting(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'furniture') {
@@ -2157,6 +2195,6 @@
     worldToScreen, screenToWorld, fitToView, render,
     paperFrameWorld, getNorthMark, setRedrawCallback, noteBox, noteVisibleOnLayer, furnViewLayout, furnCardAt,
     sheetTableAt, setSheetTableLayout,
-    fittingLayers, fittingVisibleOnLayer,
+    fittingLayers, fittingVisibleOnLayer, lineVisibleOnLayer,
   };
 })(window);

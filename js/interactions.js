@@ -210,6 +210,7 @@
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
     if (kind === 'walls') return layer !== 'furnviews';
+    if (kind === 'lines') return global.Render.lineVisibleOnLayer(el, layer);
     if (kind === 'fittings') return global.Render.fittingVisibleOnLayer(el, layer);
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
     if (kind === 'fixtures') return !!vis.fixtures;
@@ -246,6 +247,12 @@
       } else if (item.kind === 'walls') {
         const pts = global.Geometry.polygonAbsPoints(el);
         const tol = Math.max((el.thickness || 100) / 2, 12 / global.Render.view.zoom);
+        for (let i = 0; i < pts.length - 1; i++) {
+          if (distToSegment(wx, wy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y) <= tol) return el;
+        }
+      } else if (item.kind === 'lines') {
+        const pts = global.Geometry.polygonAbsPoints(el);
+        const tol = Math.max(120, 8 / global.Render.view.zoom);
         for (let i = 0; i < pts.length - 1; i++) {
           if (distToSegment(wx, wy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y) <= tol) return el;
         }
@@ -292,7 +299,7 @@
       if (!state.selectedId) return null;
       const found = global.Model.findById(project, state.selectedId);
       if (!found || found.element.shape !== 'polygon' ||
-          (found.kind !== 'regions' && found.kind !== 'premise' && found.kind !== 'furniture' && found.kind !== 'walls')) return null;
+          (found.kind !== 'regions' && found.kind !== 'premise' && found.kind !== 'furniture' && found.kind !== 'walls' && found.kind !== 'lines')) return null;
       const r = found.element;
       const pts = global.Geometry.polygonAbsPoints(r);
       for (let i = 0; i < r.points.length; i++) {
