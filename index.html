@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.73.0">
+  <link rel="stylesheet" href="css/style.css?v=1.74.0">
 </head>
 <body>
   <header class="topbar">
@@ -100,7 +100,11 @@
             <option value="both">両方を併記</option>
           </select>
         </label>
-        <p class="muted">営業所の求積を壁芯で求める警察署向け。「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます。方式は署のローカルルールに合わせて選べます。</p>
+        <div class="size-row">
+          <label>壁から <input type="number" id="premiseBoundaryGap" value="10" step="10" min="0"> mm内側</label>
+        </div>
+        <button id="btnPremiseBoundary" class="btn block">内側に囲い線を自動作成</button>
+        <p class="muted">営業所の求積を壁芯で求める警察署向け。「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます。方式は署のローカルルールに合わせて選べます。「内側に囲い線を自動作成」は、壁の内面から指定した距離(実寸)だけ内側に、営業所全体を示す青い囲い線(面積に入れない線)を作ります。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -318,13 +322,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.73.0"></script>
-  <script src="js/geometry.js?v=1.73.0"></script>
-  <script src="js/render.js?v=1.73.0"></script>
-  <script src="js/interactions.js?v=1.73.0"></script>
-  <script src="js/print.js?v=1.73.0"></script>
-  <script src="js/forms.js?v=1.73.0"></script>
-  <script src="js/main.js?v=1.73.0"></script>
+  <script src="js/model.js?v=1.74.0"></script>
+  <script src="js/geometry.js?v=1.74.0"></script>
+  <script src="js/render.js?v=1.74.0"></script>
+  <script src="js/interactions.js?v=1.74.0"></script>
+  <script src="js/print.js?v=1.74.0"></script>
+  <script src="js/forms.js?v=1.74.0"></script>
+  <script src="js/main.js?v=1.74.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

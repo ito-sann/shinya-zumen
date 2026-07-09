@@ -2064,6 +2064,10 @@
       // 面積計算のための囲い線は、照明・音響設備図には出さない。
       // 設備図では部屋の下地だけ見せ、求積用の赤/緑/青線で混乱しないようにする。
       if (currentLayer === 'lighting' && isAreaBoundaryLine(r)) return false;
+      // 囲い線(表示のみ)は「表示する図面」の指定(layers)があればそれに従う
+      if (global.Geometry.areaUseForRegion(r) === 'display'
+          && Array.isArray(r.layers) && r.layers.length
+          && r.layers.indexOf(currentLayer) < 0) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(r.type) >= 0);
     });
 

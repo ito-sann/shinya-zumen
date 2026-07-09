@@ -203,6 +203,10 @@
     const vis = global.Render.visibility(layer);
     if (kind === 'regions') {
       if (layer === 'lighting' && isAreaBoundaryLine(el)) return false;
+      // 囲い線(表示のみ)は「表示する図面」の指定(layers)があればそれに従う
+      if (global.Geometry.areaUseForRegion(el) === 'display'
+          && Array.isArray(el.layers) && el.layers.length
+          && el.layers.indexOf(layer) < 0) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
     if (kind === 'walls') return layer !== 'furnviews';

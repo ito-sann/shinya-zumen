@@ -479,6 +479,25 @@
       R.fitToView(project, canvasCss());
       refresh(); showProps(pr);
     };
+    // 外周の壁の内面から指定距離だけ内側に、営業所全体を示す青い囲い線を自動で作る。
+    // できあがった線は普通の囲い線(表示のみ)なので、あとから頂点・色・線種を自由に変えられる。
+    $('btnPremiseBoundary').onclick = () => {
+      const pr = project.premise;
+      if (!pr || (pr.points || []).length < 3) {
+        alert('先に「外周を多角形で描く」で営業所外周を作ってください。');
+        return;
+      }
+      const gap = Math.max(0, parseFloat($('premiseBoundaryGap').value) || 0);
+      const inner = G.premiseWallPolysAbs(pr).inner;
+      const pts = G.offsetPolygonAbs(inner, -gap);
+      const r = M.addPolygonRegion(project, 'other', pts);
+      r.label = '営業所囲い線';
+      r.areaUse = 'display';       // 面積計算には入れない(表示のみ)
+      r.boundaryColor = '#1d4ed8'; // 青
+      r.layers = ['plan', 'kyuseki'];
+      state.selectedId = r.id;
+      refresh(); showProps(r);
+    };
     // 壁厚・測り方の変更は、作成済みの外周にも即時反映する
     $('premWall').onchange = (e) => {
       if (project.premise) {
@@ -1250,6 +1269,15 @@
         <input type="color" id="propBoundaryColor" value="${el.boundaryColor || '#333333'}">
         <button type="button" id="propBoundaryColorReset" class="btn small">標準に戻す</button>
       </span></div>`;
+      // 囲い線(面積の扱い=表示のみ)は、平面図・求積図のどちらに出すか選べる
+      if (G.areaUseForRegion(el) === 'display') {
+        const regLayers = Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'kyuseki'];
+        html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
+        [['plan', '平面図'], ['kyuseki', '求積図']].forEach(([layer, label]) => {
+          html += `<label class="check-row"><input type="checkbox" data-region-layer="${layer}" ${regLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
+        });
+        html += '</div></div>';
+      }
       html += `<label class="check-row"><input type="checkbox" data-fieldbool="showDims" ${el.showDims !== false ? 'checked' : ''}> 辺の長さを表示</label>`;
       const edgeCount = regionEdgeCount(el);
       const hiddenEdges = new Set((el.hiddenEdges || []).map((n) => parseInt(n, 10)));
@@ -1713,6 +1741,25 @@
           }
           el.layers = layers;
           el.layer = 'custom';
+          if (layers.indexOf(R.getLayer()) < 0) {
+            R.setLayer(layers[0]);
+            buildLayerTabs();
+          }
+          refresh(); showProps(el);
+        };
+      });
+    }
+    // 囲い線(表示のみ区画)の「表示する図面」チェック
+    const regionLayerChecks = Array.from(box.querySelectorAll('[data-region-layer]'));
+    if (regionLayerChecks.length) {
+      regionLayerChecks.forEach((inp) => {
+        inp.onchange = () => {
+          const layers = regionLayerChecks.filter((check) => check.checked).map((check) => check.dataset.regionLayer);
+          if (!layers.length) {
+            inp.checked = true; // 全部外すと図面から消えて選べなくなるので最低1つは残す
+            return;
+          }
+          el.layers = layers;
           if (layers.indexOf(R.getLayer()) < 0) {
             R.setLayer(layers[0]);
             buildLayerTabs();
