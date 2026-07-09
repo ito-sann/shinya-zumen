@@ -1311,7 +1311,8 @@
       html += '</div></div>';
       html += propNum('始点X(mm)', 'x1', el.x1) + propNum('始点Y(mm)', 'y1', el.y1);
       html += propNum('終点X(mm)', 'x2', el.x2) + propNum('終点Y(mm)', 'y2', el.y2);
-      html += '<p class="muted">両端の□はキャンバス上でドラッグでも動かせます。</p>';
+      html += `<div class="add-row"><button class="btn small" id="btnDimStraighten">水平/垂直に補正</button></div>`;
+      html += '<p class="muted">押すと、傾きに近いほう(水平か垂直)のまっすぐな線に直します(用紙枠と平行になります)。両端の□はキャンバス上でドラッグでも動かせます。</p>';
     } else {
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
@@ -1460,7 +1461,8 @@
     if (kind === 'walls') {
       // 内壁: 見た目だけの壁(区画の求積には使わない)。頂点はキャンバス上でドラッグでも修正可。
       html += propNum('壁厚(mm)', 'thickness', el.thickness || 100);
-      html += '<p class="muted">見た目だけの壁で、区画の面積計算(求積表)には影響しません。頂点はキャンバス上でドラッグでも動かせます。</p>';
+      html += `<div class="add-row"><button class="btn small" id="btnWallStraighten">水平/垂直に補正</button></div>`;
+      html += '<p class="muted">見た目だけの壁で、区画の面積計算(求積表)には影響しません。「水平/垂直に補正」を押すと、傾きに近いほうのまっすぐな壁に直せます。頂点はキャンバス上でドラッグでも動かせます。</p>';
       const absPts = G.polygonAbsPoints(el);
       el.points.forEach((p, i) => {
         const abs = absPts[i] || { x: el.x + p.x, y: el.y + p.y };
@@ -1737,6 +1739,39 @@
         };
       });
     }
+    // 水平/垂直に補正: 傾きに近いほうの軸へまっすぐに直す(用紙枠と平行になる)
+    const dimStraighten = box.querySelector('#btnDimStraighten');
+    if (dimStraighten) dimStraighten.onclick = () => {
+      if (Math.abs(el.x2 - el.x1) >= Math.abs(el.y2 - el.y1)) {
+        const ym = Math.round((el.y1 + el.y2) / 2);
+        el.y1 = ym; el.y2 = ym; // 水平へ(高さは両端の中間に合わせる)
+      } else {
+        const xm = Math.round((el.x1 + el.x2) / 2);
+        el.x1 = xm; el.x2 = xm; // 垂直へ
+      }
+      refresh(); showProps(el);
+    };
+    const wallStraighten = box.querySelector('#btnWallStraighten');
+    if (wallStraighten) wallStraighten.onclick = () => {
+      // 各頂点を、直前の頂点から見て水平か垂直の近いほうへそろえる
+      const abs = G.polygonAbsPoints(el);
+      for (let i = 1; i < abs.length; i++) {
+        if (Math.abs(abs[i].x - abs[i - 1].x) >= Math.abs(abs[i].y - abs[i - 1].y)) {
+          abs[i] = { x: abs[i].x, y: abs[i - 1].y };
+        } else {
+          abs[i] = { x: abs[i - 1].x, y: abs[i].y };
+        }
+      }
+      // 左上を原点にして相対座標へ戻す(内壁の保存形式に合わせる)
+      const minX = Math.min(...abs.map((p) => p.x));
+      const minY = Math.min(...abs.map((p) => p.y));
+      el.x = minX; el.y = minY;
+      el.w = Math.max(...abs.map((p) => p.x)) - minX;
+      el.h = Math.max(...abs.map((p) => p.y)) - minY;
+      el.points = abs.map((p) => ({ x: p.x - minX, y: p.y - minY }));
+      el.rotation = 0; // 絶対座標で組み直したので回転はリセット
+      refresh(); showProps(el);
+    };
     const dupBtn = box.querySelector('#btnDup');
     if (dupBtn) dupBtn.onclick = duplicateSelected;
     const zButtons = [
