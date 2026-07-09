@@ -1361,6 +1361,10 @@
           html += `<label class="check-row"><input type="checkbox" data-fitting-layer="${layer}" ${fittingLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
         });
         html += '</div></div>';
+        // 設備アイコンは名称の表示/非表示を選べる(既定は非表示)
+        if ((M.FITTING_CATALOG[el.kind] || {}).category === 'equipment') {
+          html += `<label class="check-row"><input type="checkbox" data-fieldbool="showLabel" ${el.showLabel === true ? 'checked' : ''}> 名称を図面に表示</label>`;
+        }
       }
       // 扉・戸は開き勝手(開く方向)を切り替えられる
       if (M.DOOR_KINDS.indexOf(el.kind) >= 0) {

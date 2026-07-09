@@ -818,20 +818,59 @@
       ctx.stroke();
       labelBelow(ctx, g, h, line, '小便器');
     } else if (g.kind === 'washbasin') {
-      // 手洗い器: 角丸の四角いボウル + 中央に排水口 + 奥に水栓の丸2つ
+      // 手洗い器(CAD図を模倣): 壁付きの洗面器。壁線 + 水栓(ハンドル2つと吐水口) +
+      // 下がすぼまる角丸の外形 + 内側の鉢の輪郭 + 手前の縁の曲線 + あふれ止めの穴
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.22);
+      // 壁線(取り付け面): 本体より少し広く
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.62, -h / 2);
+      ctx.lineTo(w * 0.62, -h / 2);
+      ctx.stroke();
+      // 外形: 奥が広く手前がすぼまる角丸
+      const yT = -h / 2 + h * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.46, yT);
+      ctx.lineTo(w * 0.46, yT);
+      ctx.quadraticCurveTo(w * 0.5, yT, w * 0.5, yT + h * 0.14);
+      ctx.quadraticCurveTo(w * 0.5, h * 0.30, w * 0.36, h * 0.44);
+      ctx.quadraticCurveTo(w * 0.20, h * 0.5, 0, h * 0.5);
+      ctx.quadraticCurveTo(-w * 0.20, h * 0.5, -w * 0.36, h * 0.44);
+      ctx.quadraticCurveTo(-w * 0.5, h * 0.30, -w * 0.5, yT + h * 0.14);
+      ctx.quadraticCurveTo(-w * 0.5, yT, -w * 0.46, yT);
+      ctx.closePath();
       ctx.fill(); ctx.stroke();
+      // 内側の鉢の輪郭
       ctx.beginPath();
-      ctx.ellipse(0, h * 0.14, w * 0.1, h * 0.08, 0, 0, Math.PI * 2);
+      ctx.moveTo(-w * 0.36, yT + h * 0.10);
+      ctx.lineTo(w * 0.36, yT + h * 0.10);
+      ctx.quadraticCurveTo(w * 0.41, yT + h * 0.10, w * 0.41, yT + h * 0.22);
+      ctx.quadraticCurveTo(w * 0.41, h * 0.22, w * 0.28, h * 0.33);
+      ctx.quadraticCurveTo(w * 0.15, h * 0.40, 0, h * 0.40);
+      ctx.quadraticCurveTo(-w * 0.15, h * 0.40, -w * 0.28, h * 0.33);
+      ctx.quadraticCurveTo(-w * 0.41, h * 0.22, -w * 0.41, yT + h * 0.22);
+      ctx.quadraticCurveTo(-w * 0.41, yT + h * 0.10, -w * 0.36, yT + h * 0.10);
+      ctx.closePath();
       ctx.stroke();
-      const fr = Math.max(wpx(20), Math.min(w, h) * 0.07);
+      // 手前の縁の曲線(鉢の内側の盛り上がり)
       ctx.beginPath();
-      ctx.arc(-w * 0.16, -h / 2 * 0.6, fr, 0, Math.PI * 2);
+      ctx.moveTo(-w * 0.28, h * 0.14);
+      ctx.quadraticCurveTo(0, h * 0.33, w * 0.28, h * 0.14);
       ctx.stroke();
+      // 水栓: 台座(壁をまたぐ小箱) + 左右のハンドル + 吐水口
+      roundRectPath(ctx, -w * 0.16, -h / 2 - h * 0.05, w * 0.32, h * 0.10, w * 0.02);
+      ctx.fill(); ctx.stroke();
+      const hr = w * 0.045;
+      for (const hxp of [-w * 0.11, w * 0.11]) {
+        ctx.beginPath();
+        ctx.arc(hxp, -h / 2, hr, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+      roundRectPath(ctx, -w * 0.035, -h / 2 + h * 0.05, w * 0.07, h * 0.16, w * 0.015);
+      ctx.fill(); ctx.stroke();
+      // あふれ止めの穴(吐水口の下の小さな丸)
       ctx.beginPath();
-      ctx.arc(w * 0.16, -h / 2 * 0.6, fr, 0, Math.PI * 2);
+      ctx.arc(0, h * 0.02, w * 0.03, 0, Math.PI * 2);
       ctx.stroke();
       labelBelow(ctx, g, h, line, '手洗い器');
     } else if (g.kind === 'microwave') {
@@ -987,6 +1026,8 @@
 
   /* 設備アイコンの下にラベルを1行表示する(共通処理) */
   function labelBelow(ctx, g, h, color, fallback) {
+    // 設備アイコンの名称は既定では図面に出さない(「名称を図面に表示」を入れたときだけ)
+    if (g.showLabel !== true) return;
     ctx.fillStyle = color;
     ctx.font = `${fontPx(180, g)}px sans-serif`;
     ctx.textAlign = 'center';
