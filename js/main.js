@@ -1017,7 +1017,7 @@
         : `自動集計: ${g.autoCount}。数字を入れると手入力できます`;
       return `<tr><td>${esc(g.symbol)}</td><td>${esc(g.label)}</td>
         <td><input type="number" min="0" step="1" class="fixture-count-input"
-          data-fixture-count="${esc(g.kind)}" value="${g.count}" title="${esc(title)}"></td>
+          data-fixture-count="${esc(g.key)}" value="${g.count}" title="${esc(title)}"></td>
         <td>${esc(g.watt || '—')}</td></tr>`;
     }).join('');
     if (!rows) rows = '<tr><td colspan="4" class="muted">設備がありません</td></tr>';
@@ -1132,13 +1132,13 @@
   function bindFixtureCountInputs() {
     $('kyusekiBox').querySelectorAll('[data-fixture-count]').forEach((inp) => {
       inp.addEventListener('input', (e) => {
-        const kind = e.target.dataset.fixtureCount;
+        const key = e.target.dataset.fixtureCount;
         project.meta.fixtureCountOverrides = project.meta.fixtureCountOverrides || {};
         if (e.target.value === '') {
-          delete project.meta.fixtureCountOverrides[kind];
+          delete project.meta.fixtureCountOverrides[key];
         } else {
           const n = Math.max(0, Math.round(parseFloat(e.target.value) || 0));
-          project.meta.fixtureCountOverrides[kind] = n;
+          project.meta.fixtureCountOverrides[key] = n;
         }
         draw();
       });
@@ -1406,6 +1406,8 @@
     if (kind === 'fixtures') {
       html += propText('ワット数', 'watt', el.watt || '');
       html += propText('型番メモ', 'model', el.model || '');
+      html += propText('枝番・グループ(任意)', 'branch', el.branch || '');
+      html += '<p class="muted">同じ種類でも枝番を入れると設備一覧表で別行に分かれます(例: A/B/C、吊高違いなど)。空欄なら今まで通り1つにまとまります。</p>';
     }
     if (kind === 'premise') {
       // 壁厚・測り方は左の「営業所外周(壁芯)」欄から変更する(入力欄を1か所にまとめる)

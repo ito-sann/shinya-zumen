@@ -731,7 +731,27 @@
       ctx.beginPath();
       ctx.ellipse(0, bowlCy + bowlRy * 0.06, bowlRx * 0.66, bowlRy * 0.7, 0, 0, Math.PI * 2);
       ctx.stroke();
-      labelBelow(ctx, g, h, line, '便器');
+      labelBelow(ctx, g, h, line, '洋式便器');
+    } else if (g.kind === 'toiletJp') {
+      // 和式便器: 上から見た細長い便鉢(二重の輪郭) + 手前の金隠し(ドームの覆い)
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      // 便鉢の外形: 上下の端が丸い細長い形
+      roundRectPath(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) / 2 * 0.95);
+      ctx.fill(); ctx.stroke();
+      // 内側の輪郭(鉢の縁)
+      roundRectPath(ctx, -w * 0.36, -h / 2 + h * 0.10, w * 0.72, h * 0.80, w * 0.30);
+      ctx.stroke();
+      // 金隠し: 前端の覆い(横一線の弦 + 前方へふくらむ弧)
+      const hoodY = -h / 2 + h * 0.26;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.42, hoodY);
+      ctx.lineTo(w * 0.42, hoodY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, hoodY, w * 0.42, h * 0.19, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      labelBelow(ctx, g, h, line, '和式便器');
     } else if (g.kind === 'washbasin') {
       // 手洗い器: 角丸の四角いボウル + 中央に排水口 + 奥に水栓の丸2つ
       ctx.strokeStyle = line;
@@ -911,7 +931,8 @@
   function drawFixture(ctx, x, opts) {
     const p = worldToScreen(x.x, x.y);
     const r = wpx(220); // アイコン半径(実寸220mm相当・図面に対して固定)
-    const sym = (global.Model.FIXTURE_CATALOG[x.kind] || {}).symbol || '?';
+    const branch = (x.branch || '').trim();
+    const sym = ((global.Model.FIXTURE_CATALOG[x.kind] || {}).symbol || '?') + (branch ? '-' + branch : '');
     ctx.save();
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -921,7 +942,9 @@
     ctx.strokeStyle = opts.selected ? '#d32f2f' : '#f9a825';
     ctx.stroke();
     ctx.fillStyle = '#5d4037';
-    ctx.font = `bold ${wpx(170)}px sans-serif`;
+    // 記号が長い(枝番つき等)場合は円に収まるよう文字を少し縮める
+    const fontMm = sym.length > 3 ? 170 * (3 / sym.length) : 170;
+    ctx.font = `bold ${wpx(fontMm)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(sym, p.x, p.y);

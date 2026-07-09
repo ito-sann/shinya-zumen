@@ -544,25 +544,34 @@
   }
 
   /* 照明・音響設備の一覧表(種類ごとに数量・ワット数を集計)。
-   * 照明・音響設備図に添える「設備一覧表」のデータになる。 */
+   * 照明・音響設備図に添える「設備一覧表」のデータになる。
+   * 同じ種類でも設備ごとに「枝番(branch)」を入力していれば、種類+枝番で別行に分ける。
+   * (ワット数や吊り下げ高さなど、分ける基準はユーザーが自由に決めて枝番に書き込む) */
   function fixtureSummary(project) {
     const cat = global.Model.FIXTURE_CATALOG;
     const map = new Map();
     const overrides = (project.meta && project.meta.fixtureCountOverrides) || {};
     for (const x of project.fixtures) {
-      if (!map.has(x.kind)) {
+      const branch = (x.branch || '').trim();
+      const key = branch ? `${x.kind}::${branch}` : x.kind;
+      if (!map.has(key)) {
         const c = cat[x.kind] || {};
-        map.set(x.kind, { kind: x.kind, label: c.label || x.label, symbol: c.symbol || '?', autoCount: 0, watts: new Set() });
+        map.set(key, {
+          key, kind: x.kind, branch,
+          label: (c.label || x.label) + (branch ? ' ' + branch : ''),
+          symbol: (c.symbol || '?') + (branch ? '-' + branch : ''),
+          autoCount: 0, watts: new Set(),
+        });
       }
-      const g = map.get(x.kind);
+      const g = map.get(key);
       g.autoCount++;
       if (x.watt) g.watts.add(String(x.watt));
     }
     return Array.from(map.values()).map((g) => {
-      const manual = Object.prototype.hasOwnProperty.call(overrides, g.kind);
-      const count = manual ? Math.max(0, parseInt(overrides[g.kind], 10) || 0) : g.autoCount;
+      const manual = Object.prototype.hasOwnProperty.call(overrides, g.key);
+      const count = manual ? Math.max(0, parseInt(overrides[g.key], 10) || 0) : g.autoCount;
       return {
-        kind: g.kind, label: g.label, symbol: g.symbol,
+        key: g.key, kind: g.kind, branch: g.branch, label: g.label, symbol: g.symbol,
         count, autoCount: g.autoCount, manualCount: manual,
         watt: Array.from(g.watts).join(', '),
       };
