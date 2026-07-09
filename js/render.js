@@ -714,23 +714,48 @@
       ctx.textBaseline = 'top';
       fillTextUpright(ctx, (g.rotation || 0) * Math.PI / 180, 0, h / 2 + wpx(50), '出入口');
     } else if (g.kind === 'toilet') {
-      // 洋式便器: 奥にタンク(角丸)+上面中央のフラッシュボタン、手前に便座(座面の輪を二重楕円で表現)
+      // 洋式便器(CAD図を模倣): 奥に大きめの角丸タンク(縁に小さなボタン)、
+      // 手前にふた閉じ状態の便体(奥は直線・先端が大きく丸いD形)、
+      // タンク寄りの側面に操作パネル(ボタン付きリモコン)
       ctx.strokeStyle = line;
       ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      const tankH = h * 0.24;
-      roundRectPath(ctx, -w / 2, -h / 2, w, tankH, Math.min(w, tankH) * 0.25);
+      const tankH = h * 0.30;
+      roundRectPath(ctx, -w / 2, -h / 2, w, tankH, Math.min(w, tankH) * 0.30);
       ctx.fill(); ctx.stroke();
-      const nubW = w * 0.18, nubH = tankH * 0.45;
-      ctx.fillRect(-nubW / 2, -h / 2 - nubH * 0.45, nubW, nubH);
-      ctx.strokeRect(-nubW / 2, -h / 2 - nubH * 0.45, nubW, nubH);
-      const bowlCy = -h / 2 + tankH + (h - tankH) / 2;
-      const bowlRx = w / 2 * 0.86, bowlRy = (h - tankH) / 2 * 0.92;
+      // タンク奥の縁の小さなボタン(左寄りの半円のふくらみ)
       ctx.beginPath();
-      ctx.ellipse(0, bowlCy, bowlRx, bowlRy, 0, 0, Math.PI * 2);
+      ctx.arc(-w * 0.18, -h / 2, w * 0.07, Math.PI, Math.PI * 2);
       ctx.fill(); ctx.stroke();
+      // 便体: 奥(タンク側)は直線、手前の先端は大きく丸い
+      const bw = w * 0.96;
+      const yB0 = -h / 2 + tankH + h * 0.02, yB1 = h / 2;
+      const rt = bw * 0.10, rb = bw / 2;
       ctx.beginPath();
-      ctx.ellipse(0, bowlCy + bowlRy * 0.06, bowlRx * 0.66, bowlRy * 0.7, 0, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.moveTo(-bw / 2 + rt, yB0);
+      ctx.lineTo(bw / 2 - rt, yB0);
+      ctx.quadraticCurveTo(bw / 2, yB0, bw / 2, yB0 + rt);
+      ctx.lineTo(bw / 2, yB1 - rb);
+      ctx.arc(0, yB1 - rb, rb, 0, Math.PI);
+      ctx.lineTo(-bw / 2, yB0 + rt);
+      ctx.quadraticCurveTo(-bw / 2, yB0, -bw / 2 + rt, yB0);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // ふたのヒンジ(タンク側の二重線)
+      for (const dy of [h * 0.035, h * 0.06]) {
+        ctx.beginPath();
+        ctx.moveTo(-bw / 2 * 0.96, yB0 + dy);
+        ctx.lineTo(bw / 2 * 0.96, yB0 + dy);
+        ctx.stroke();
+      }
+      // 操作パネル(タンク寄りの右側面・ボタン付き)
+      const pw = w * 0.18, pl = h * 0.22, px0 = w / 2 + w * 0.05, py0 = yB0 + h * 0.015;
+      roundRectPath(ctx, px0, py0, pw, pl, pw * 0.2);
+      ctx.fill(); ctx.stroke();
+      const bs = pw * 0.42;
+      for (let i = 0; i < 4; i++) {
+        const by = py0 + pl * 0.14 + i * (pl * 0.20);
+        ctx.strokeRect(px0 + (pw - bs) / 2, by, bs, bs);
+      }
       labelBelow(ctx, g, h, line, '洋式便器');
     } else if (g.kind === 'toiletJp') {
       // 和式便器: 上から見た細長い便鉢(二重の輪郭) + 手前の金隠し(ドームの覆い)
@@ -752,6 +777,46 @@
       ctx.ellipse(0, hoodY, w * 0.42, h * 0.19, 0, Math.PI, Math.PI * 2);
       ctx.stroke();
       labelBelow(ctx, g, h, line, '和式便器');
+    } else if (g.kind === 'urinal') {
+      // 小便器(ストール型・CAD図を模倣): 上が壁付きの角丸、下すぼまりの盾形の外形 +
+      // 波形の鉢の縁 + 上部中央の洗浄弁(小箱)と給水管
+      ctx.strokeStyle = line;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
+      const r = w * 0.10;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2 + r, -h / 2);
+      ctx.lineTo(w / 2 - r, -h / 2);
+      ctx.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+      ctx.lineTo(w / 2, h * 0.02);
+      // 右肩: 内側へ凹みながら下へ
+      ctx.bezierCurveTo(w / 2, h * 0.24, w * 0.24, h * 0.18, w * 0.17, h * 0.32);
+      // 中央下のふくらみ(鉢の先端)
+      ctx.bezierCurveTo(w * 0.12, h * 0.44, w * 0.05, h / 2, 0, h / 2);
+      ctx.bezierCurveTo(-w * 0.05, h / 2, -w * 0.12, h * 0.44, -w * 0.17, h * 0.32);
+      ctx.bezierCurveTo(-w * 0.24, h * 0.18, -w / 2, h * 0.24, -w / 2, h * 0.02);
+      ctx.lineTo(-w / 2, -h / 2 + r);
+      ctx.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // 鉢の縁(上辺が波形の内側ライン)
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.30, h * 0.10);
+      ctx.bezierCurveTo(-w * 0.32, -h * 0.02, -w * 0.16, 0, -w * 0.08, -h * 0.02);
+      ctx.bezierCurveTo(-w * 0.03, -h * 0.06, w * 0.03, -h * 0.06, w * 0.08, -h * 0.02);
+      ctx.bezierCurveTo(w * 0.16, 0, w * 0.32, -h * 0.02, w * 0.30, h * 0.10);
+      ctx.bezierCurveTo(w * 0.30, h * 0.24, w * 0.12, h * 0.34, 0, h * 0.34);
+      ctx.bezierCurveTo(-w * 0.12, h * 0.34, -w * 0.30, h * 0.24, -w * 0.30, h * 0.10);
+      ctx.closePath();
+      ctx.stroke();
+      // 洗浄弁(上部中央の小箱)と給水管
+      const vw = w * 0.16, vh = h * 0.16, vy = -h / 2 + h * 0.05;
+      roundRectPath(ctx, -vw / 2, vy, vw, vh, vw * 0.3);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, vy);
+      ctx.lineTo(0, -h / 2 - h * 0.06);
+      ctx.stroke();
+      labelBelow(ctx, g, h, line, '小便器');
     } else if (g.kind === 'washbasin') {
       // 手洗い器: 角丸の四角いボウル + 中央に排水口 + 奥に水栓の丸2つ
       ctx.strokeStyle = line;
