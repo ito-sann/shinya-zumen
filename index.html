@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.75.0">
+  <link rel="stylesheet" href="css/style.css?v=1.76.0">
 </head>
 <body>
   <header class="topbar">
@@ -43,6 +43,7 @@
           <button id="btnRestore" class="btn small">取り込み</button>
         </div>
         <input type="file" id="backupInput" accept="application/json" hidden>
+        <p id="autosaveWarn" style="display:none;color:#d32f2f;font-size:12px;margin:6px 0 0">⚠ 自動保存に失敗しています(容量不足の可能性)。「保存」または「全案件をバックアップ」でファイルに書き出してください。</p>
         <p class="muted">案件ごとにブラウザ内へ自動保存されます。案件名は店舗名から自動でつきます。パソコンの買い替えに備えて、ときどき「全案件をバックアップ」でファイルに書き出してください。</p>
       </section>
 
@@ -346,13 +347,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.75.0"></script>
-  <script src="js/geometry.js?v=1.75.0"></script>
-  <script src="js/render.js?v=1.75.0"></script>
-  <script src="js/interactions.js?v=1.75.0"></script>
-  <script src="js/print.js?v=1.75.0"></script>
-  <script src="js/forms.js?v=1.75.0"></script>
-  <script src="js/main.js?v=1.75.0"></script>
+  <script src="js/model.js?v=1.76.0"></script>
+  <script src="js/geometry.js?v=1.76.0"></script>
+  <script src="js/render.js?v=1.76.0"></script>
+  <script src="js/interactions.js?v=1.76.0"></script>
+  <script src="js/print.js?v=1.76.0"></script>
+  <script src="js/forms.js?v=1.76.0"></script>
+  <script src="js/main.js?v=1.76.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

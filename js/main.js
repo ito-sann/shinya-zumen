@@ -35,10 +35,51 @@
   function caseName() {
     return (project.meta.storeName || '').trim() || '無題の案件';
   }
+  /* ---- 複数タブ対策 ----
+   * 同じアプリを複数のタブ・ウィンドウで開くと、古い内容を持つタブの自動保存が
+   * 新しい保存を上書きして、あとから描いた線や入力(ワット数など)が消えることがあった。
+   * 保存のたびに「印(トークン)」を書き、印が変わっていたら=他のタブが先に保存していたら、
+   * 上書きせずその内容をこのタブへ取り込む。 */
+  const tokenKey = (id) => `shinya-zumen-rev-${id}`;
+  let saveToken = null; // このタブが最後に書いた(または取り込んだ)保存の印
+  function newToken() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+  function rememberToken(id) {
+    try { saveToken = localStorage.getItem(tokenKey(id)); } catch (e) { saveToken = null; }
+  }
+  /* 自動保存に失敗したときの警告(容量不足・プライベートモード等)。
+   * 無言だと「変更したのに消えた」ように見えるため、案件欄の下に表示する。 */
+  function setAutosaveWarn(failed) {
+    const el = $('autosaveWarn');
+    if (el) el.style.display = failed ? '' : 'none';
+  }
+  /* 他のタブが保存した最新の控えを、このタブへ取り込む */
+  function adoptStoredCase() {
+    try {
+      const text = localStorage.getItem(caseKey(currentCaseId));
+      if (!text) return;
+      const p = M.deserialize(text);
+      rememberToken(currentCaseId);
+      adoptProject(p, { keepView: true });
+      recordHistory(); // 取り込んだ状態も「元に戻す」の対象にする
+    } catch (e) { /* 壊れた控えは無視 */ }
+  }
   function saveAutosave() {
     if (!currentCaseId) return;
     try {
+      // 他のタブがこの案件を先に保存していたら、上書きせず最新の内容を取り込む
+      const cur = localStorage.getItem(tokenKey(currentCaseId));
+      if (cur && saveToken && cur !== saveToken) {
+        adoptStoredCase();
+        return;
+      }
+      // 印(トークン)の更新は書き込みがすべて成功してから。途中で失敗すると
+      // 印だけがずれて、次回の保存で不要な取り込みが走ってしまうため。
+      const nextToken = newToken();
       localStorage.setItem(caseKey(currentCaseId), M.serialize(project));
+      localStorage.setItem(tokenKey(currentCaseId), nextToken);
+      saveToken = nextToken;
       localStorage.setItem(CURRENT_KEY, currentCaseId);
       const list = readCases();
       const it = list.find((c) => c.id === currentCaseId);
@@ -46,7 +87,11 @@
       else list.push({ id: currentCaseId, name: caseName(), updatedAt: Date.now() });
       writeCases(list);
       buildCaseSelect();
-    } catch (e) { /* プライベートモードや容量超過では保存できないが、操作は止めない */ }
+      setAutosaveWarn(false);
+    } catch (e) {
+      // プライベートモードや容量超過では保存できない。操作は止めないが警告は出す
+      setAutosaveWarn(true);
+    }
   }
   function scheduleAutosave() {
     clearTimeout(autosaveTimer);
@@ -174,6 +219,7 @@
         cases.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       currentCaseId = pick.id;
       saved = loadCase(pick.id);
+      rememberToken(pick.id);
     }
     if (saved) project = saved;
     if (!currentCaseId) currentCaseId = newCaseId();
@@ -187,6 +233,13 @@
     window.addEventListener('resize', () => { resizeCanvas(); draw(); });
     // タブを閉じる・リロードする瞬間は待たずに即保存する
     window.addEventListener('pagehide', saveAutosave);
+    // 別のタブ・ウィンドウで同じ案件が保存されたら、その内容をこのタブにも取り込む
+    // (以前は互いに上書きし合い、あとから描いた線や入力が消えることがあった)
+    window.addEventListener('storage', (e) => {
+      if (!e.key) return;
+      if (e.key === CASES_KEY) { buildCaseSelect(); return; }
+      if (e.key === caseKey(currentCaseId) && e.newValue) adoptStoredCase();
+    });
     // 下絵画像の読み込み完了時に描き直してもらう
     R.setRedrawCallback(draw);
     // Cmd/Ctrl+Z で元に戻す(Shift付きでやり直す)
@@ -290,6 +343,7 @@
         return;
       }
       currentCaseId = id;
+      rememberToken(id);
       try { localStorage.setItem(CURRENT_KEY, id); } catch (err) { /* 何もしない */ }
       adoptProject(p);
       resetHistory();
@@ -298,6 +352,7 @@
     $('btnCaseNew').onclick = () => {
       saveAutosave(); // 今の案件を保存してから白紙の案件を作る
       currentCaseId = newCaseId();
+      saveToken = null; // 新しい案件にはまだ保存の印がない
       adoptProject(M.defaultProject());
       resetHistory();
       saveAutosave(); // 一覧に登録してセレクトを更新
@@ -310,10 +365,12 @@
       }
       if (!confirm(`案件「${caseName()}」を削除します。よろしいですか?\n(この案件の自動保存の控えも消えます)`)) return;
       try { localStorage.removeItem(caseKey(currentCaseId)); } catch (e) { /* 何もしない */ }
+      try { localStorage.removeItem(tokenKey(currentCaseId)); } catch (e) { /* 何もしない */ }
       const rest = readCases().filter((c) => c.id !== currentCaseId);
       writeCases(rest);
       const next = rest.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       currentCaseId = next.id;
+      rememberToken(next.id);
       adoptProject(loadCase(next.id) || M.defaultProject());
       resetHistory();
       buildCaseSelect();
