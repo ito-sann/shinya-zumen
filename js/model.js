@@ -31,6 +31,7 @@
   const FURNITURE_CATALOG = {
     table:    { label: 'テーブル',   w: 600,  h: 600, height: 700  },
     chair:    { label: '椅子',       w: 450,  h: 450, height: 800  },
+    stoolHigh:{ label: 'カウンターチェア', w: 350, h: 400, height: 800 },
     counter:  { label: 'カウンター', w: 3200, h: 600, height: 1000 },
     /* t = カウンターの厚み(腕の幅)。L字は外形 w×h から下側の片側を欠いた形。 */
     counterL: { label: 'L字カウンター', w: 2700, h: 1800, height: 1000, t: 600 },
@@ -69,6 +70,33 @@
       // 正面=背もたれは幅いっぱい / 側面=後方の縦バー
       parts.push(rear ? _box(span - legW, span, seatH, H) : _box(0, span, seatH, H));
     }
+    return parts;
+  }
+
+  /* カウンターチェア(昇降式)。span=見えている幅, H=全高(背もたれ上端)。
+   * ラッパ形の台座 + 1本の支柱 + 足置き + 回転盤 + 座面 + 低い背もたれ。
+   * rear=true(側面図)では背もたれを後方の縦形にする。 */
+  function _stoolHigh(span, H, rear) {
+    const cx = span / 2;
+    const baseH = Math.max(40, H * 0.05);        // 台座の高さ
+    const colW = Math.max(50, span * 0.16);      // 支柱の幅
+    const seatTop = H * 0.72;                    // 座面の上端(背もたれを除く)
+    const seatThk = Math.min(80, H * 0.09);      // 座面の厚み
+    const footY = H * 0.34;                      // 足置きの高さ
+    const parts = [
+      // ラッパ形の台座(下が広い台形)
+      [{ x: span * 0.06, y: 0 }, { x: span * 0.94, y: 0 },
+       { x: cx + colW, y: baseH }, { x: cx - colW, y: baseH }],
+      _box(cx - colW / 2, cx + colW / 2, baseH, seatTop - seatThk),          // 支柱
+      _box(cx - span * 0.30, cx + span * 0.30, footY, footY + Math.max(25, H * 0.025)), // 足置き
+      _box(cx - span * 0.34, cx + span * 0.34, seatTop - seatThk - 25, seatTop - seatThk), // 回転盤
+      _box(0, span, seatTop - seatThk, seatTop), // 座面
+    ];
+    // 背もたれ: 正面=幅いっぱいの低い背 / 側面=後方へ反った形
+    parts.push(rear
+      ? [{ x: span * 0.70, y: seatTop }, { x: span, y: seatTop },
+         { x: span, y: H }, { x: span * 0.80, y: H }]
+      : _box(span * 0.06, span * 0.94, seatTop, H));
     return parts;
   }
 
@@ -181,6 +209,10 @@
     chair: {
       back:  { label: '背もたれ付き', front: (d) => _chair(d.w, d.height, true, false), side: (d) => _chair(d.h, d.height, true, true) },
       stool: { label: '背もたれなし(スツール)', front: (d) => _chair(d.w, d.height, false, false), side: (d) => _chair(d.h, d.height, false, true) },
+      plain: { label: '四角(省略)', front: _none, side: _none },
+    },
+    stoolHigh: {
+      std:   { label: '昇降式(台座・支柱・足置き)', front: (d) => _stoolHigh(d.w, d.height, false), side: (d) => _stoolHigh(d.h, d.height, true) },
       plain: { label: '四角(省略)', front: _none, side: _none },
     },
     counter: {
