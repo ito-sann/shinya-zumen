@@ -61,7 +61,18 @@
       if (!text) return;
       const p = M.deserialize(text);
       rememberToken(currentCaseId);
+      // 取り込みで選択が外れないよう、同じ要素が残っていれば選択を復元する
+      // (編集中のコメント等から勝手に選択が外れる不具合の対策)
+      const keepId = state.selectedId;
       adoptProject(p, { keepView: true });
+      if (keepId) {
+        const found = M.findById(project, keepId);
+        if (found) {
+          state.selectedId = keepId;
+          refresh(); // 図面と要素一覧のハイライトも選択状態に合わせ直す
+          showProps(found.element);
+        }
+      }
       recordHistory(); // 取り込んだ状態も「元に戻す」の対象にする
     } catch (e) { /* 壊れた控えは無視 */ }
   }
@@ -74,10 +85,18 @@
         adoptStoredCase();
         return;
       }
+      // 内容が前回の保存から変わっていなければ、何も書かない(印も進めない)。
+      // ここで印を進めてしまうと、他のタブが「先に保存された」と誤認して取り込みを
+      // 繰り返し、編集中の選択が外れる「ピンポン」が起きる。
+      const json = M.serialize(project);
+      if (localStorage.getItem(caseKey(currentCaseId)) === json) {
+        setAutosaveWarn(false);
+        return;
+      }
       // 印(トークン)の更新は書き込みがすべて成功してから。途中で失敗すると
       // 印だけがずれて、次回の保存で不要な取り込みが走ってしまうため。
       const nextToken = newToken();
-      localStorage.setItem(caseKey(currentCaseId), M.serialize(project));
+      localStorage.setItem(caseKey(currentCaseId), json);
       localStorage.setItem(tokenKey(currentCaseId), nextToken);
       saveToken = nextToken;
       localStorage.setItem(CURRENT_KEY, currentCaseId);
@@ -1377,9 +1396,9 @@
       html = `<div class="prop-row"><span>種別</span><b>${kindLabel(el, kind)}</b></div>`;
     }
     if (kind === 'notes') {
-      // メモは本文(複数行可)を直接編集する
-      html += `<label class="prop-row"><span>本文</span>
-        <textarea data-field="text" rows="3">${esc(el.text || '')}</textarea></label>`;
+      // メモは本文(複数行可)を直接編集する。長文でも見やすいよう広めにする
+      html += `<label class="prop-row prop-note-text"><span>本文</span>
+        <textarea data-field="text" rows="8">${esc(el.text || '')}</textarea></label>`;
     } else if (kind !== 'dimensions') {
       html += propText('ラベル', 'label', el.label);
     }

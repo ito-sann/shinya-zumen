@@ -96,6 +96,11 @@ table.summary td { text-align: right; font-weight: 700; padding: 4px 2px; }
 .props .check-stack { flex: 1 1 auto; }
 .props .check-stack .check-row { margin: 2px 0; }
 
+/* メモ・コメントの本文欄: 長文でも読みやすいよう、ラベルの下に全幅で広げる */
+.props .prop-note-text { flex-direction: column; align-items: stretch; }
+.props .prop-note-text span { flex: none; }
+.props .prop-note-text textarea { width: 100%; min-height: 140px; box-sizing: border-box; }
+
 /* 文字サイズの −/＋/標準 コントロール(Googleドキュメント風)。
  * .prop-row span の幅90px固定に負けないよう詳細度を上げる。 */
 .props .prop-row span.font-ctrl {
