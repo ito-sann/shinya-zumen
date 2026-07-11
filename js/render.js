@@ -2170,8 +2170,9 @@
       }
     }
     if (vis.fixtures) drawFixtureLegend(ctx, canvas, project);
-    // 求積図では壁芯線(営業所求積の根拠になる線)を最前面側に描く
-    if (currentLayer === 'kyuseki' && project.premise) {
+    // 壁芯線(営業所求積の根拠になる線)を最前面側に描く。
+    // 求積図だけでなく平面図にも同じ線を表示する。
+    if ((currentLayer === 'kyuseki' || currentLayer === 'plan') && project.premise) {
       drawPremiseCenterline(ctx, project);
     }
     // 求積表(計算過程)を図面そのものに重ねる(求積図のみ・設定で切替)
