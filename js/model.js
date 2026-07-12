@@ -362,6 +362,10 @@
         author: '',
         lightingNote: '', // 照明・音響設備図の凡例に添える自由記入コメント
         fixtureCountOverrides: {}, // 照明・音響設備一覧表の数量手入力(kind → 数量)
+        /* 手入力の求積表(「求積表」ページ)。図面の区画とは独立に、
+         * 名称・計算式・グループを自分で入力して計算表を作る。
+         * digits = 各行の面積の桁数(2 or 4)。営業所合計は常に小数第2位。 */
+        manualKyuseki: { digits: 2, rows: [] },
         showPaperFrame: true, // 用紙枠ガイド(用紙サイズ×縮尺の範囲)を表示するか
         northAngle: 0,        // 方位記号の角度(度)。0 = 真上が北
         showNorthMark: false, // 方位記号(N)を表示するか。既定は非表示
@@ -847,6 +851,9 @@
     project.dimensions = obj.dimensions || [];
     // 届出書情報は項目を追加しても古いデータが壊れないよう既定値で補完する
     project.meta.todokede = Object.assign({}, base.meta.todokede, (obj.meta && obj.meta.todokede) || {});
+    // 手入力の求積表も同様に既定値で補完する(古いデータには存在しない)
+    project.meta.manualKyuseki = Object.assign({ digits: 2, rows: [] }, (obj.meta && obj.meta.manualKyuseki) || {});
+    if (!Array.isArray(project.meta.manualKyuseki.rows)) project.meta.manualKyuseki.rows = [];
     project.checklist = Object.assign({ corp: false, items: {} }, obj.checklist || {});
     project.checklist.items = (obj.checklist && obj.checklist.items) || {};
     // 旧版からの引っ越し: 営業所求積図と客室・調理場求積図は「求積図」1枚に統合した。

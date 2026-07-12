@@ -578,6 +578,67 @@
     });
   }
 
+  /* ---- 手入力の求積表 ----
+   * 図面の区画とは独立に、名称・計算式・グループを自分で入力して作る計算表。
+   * 客室/厨房の線引き(カウンター内外など)が図面の区画と一致しない案件向け。 */
+
+  /* 手入力の計算式(例: 4.50×3.20÷2)を計算する。全角の数字・記号も受け付ける。
+   * 数字と + - × ÷ ( ) 以外が入っていたり計算できないときは null を返す。 */
+  function evalAreaExpr(expr) {
+    if (typeof expr !== 'string') return null;
+    const s = expr
+      .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[×ｘＸxX]/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/[＋]/g, '+')
+      .replace(/[－ー−]/g, '-')
+      .replace(/．/g, '.')
+      .replace(/（/g, '(')
+      .replace(/）/g, ')')
+      .replace(/[,\s]+/g, '');
+    if (!s || !/^[0-9.+\-*/()]+$/.test(s)) return null;
+    try {
+      const v = Function('"use strict";return (' + s + ')')();
+      return Number.isFinite(v) ? v : null;
+    } catch (e) { return null; }
+  }
+
+  /* 指定の桁で四捨五入する(digits=2 なら小数第3位を四捨五入) */
+  function roundTo(v, digits) {
+    const k = Math.pow(10, digits);
+    return Math.round(v * k) / k;
+  }
+
+  const MANUAL_KYUSEKI_GROUPS = [
+    { key: 'kyakushitsu', title: '客室求積表',   subtotal: '客室合計' },
+    { key: 'chubo',       title: '調理場求積表', subtotal: '調理場合計' },
+    { key: 'other',       title: 'その他求積表', subtotal: 'その他合計' },
+  ];
+
+  /* 手入力の求積表データを組み立てる。
+   * 各行: 式から面積を計算し、選んだ桁数(2 or 4)で四捨五入。
+   * グループ小計 = その桁の行の合計。営業所合計 = 全行の合計を常に小数第2位で。 */
+  function manualKyusekiData(project) {
+    const mk = (project.meta && project.meta.manualKyuseki) || {};
+    const digits = mk.digits === 4 ? 4 : 2;
+    const rows = (Array.isArray(mk.rows) ? mk.rows : []).map((r, i) => {
+      const raw = evalAreaExpr(r.expr);
+      return {
+        id: r.id, code: code(i + 1),
+        name: r.name || '', expr: r.expr || '',
+        group: ['kyakushitsu', 'chubo', 'other'].indexOf(r.group) >= 0 ? r.group : 'other',
+        value: raw == null ? null : roundTo(raw, digits),
+      };
+    });
+    const groups = MANUAL_KYUSEKI_GROUPS.map((g) => {
+      const list = rows.filter((r) => r.group === g.key);
+      const subtotal = roundTo(list.reduce((a, r) => a + (r.value || 0), 0), digits);
+      return { key: g.key, title: g.title, subtotalLabel: g.subtotal, rows: list, subtotal };
+    }).filter((g) => g.rows.length);
+    const total = roundTo(rows.reduce((a, r) => a + (r.value || 0), 0), 2);
+    return { digits, rows, groups, total };
+  }
+
   /* 全要素のバウンディングボックス(mm)。空なら既定値。 */
   function boundingBox(project) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -633,5 +694,6 @@
     furnitureGroups, furnitureNumberMap, furnKey,
     summary, sightlineWarnings, kyakushitsuSizeWarnings, KYAKUSHITSU_MIN_SQM,
     fixtureSummary, boundingBox,
+    evalAreaExpr, manualKyusekiData,
   };
 })(window);

@@ -209,7 +209,7 @@
           && el.layers.indexOf(layer) < 0) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
-    if (kind === 'walls') return layer !== 'furnviews';
+    if (kind === 'walls') return layer !== 'furnviews' && layer !== 'kyusekihyo';
     if (kind === 'lines') return global.Render.lineVisibleOnLayer(el, layer);
     if (kind === 'fittings') return global.Render.fittingVisibleOnLayer(el, layer);
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
@@ -265,8 +265,10 @@
     filter = filter || 'all';
     const hit = hitOrderable(project, wx, wy, filter);
     if (hit) return hit;
-    // 営業所外周は一番下(輪郭線の近くだけ)
-    if (matchesSelectionFilter(project.premise, 'premise', filter) && nearPremiseEdge(project, wx, wy)) return project.premise;
+    // 営業所外周は一番下(輪郭線の近くだけ)。図面を描かないページでは選ばない
+    const layer = global.Render.getLayer();
+    if (layer !== 'furnviews' && layer !== 'kyusekihyo' &&
+        matchesSelectionFilter(project.premise, 'premise', filter) && nearPremiseEdge(project, wx, wy)) return project.premise;
     return null;
   }
 
@@ -685,7 +687,7 @@
             id: state.selectedId,
             kind: 'sheetTable',
             layer,
-            label: ({ kyuseki: '求積図の表', lighting: '照明・音響設備一覧表' })[layer] || '図面上の表',
+            label: ({ kyuseki: '求積図の表', kyusekihyo: '求積表(手入力)', lighting: '照明・音響設備一覧表' })[layer] || '図面上の表',
             x: cur.x + dx * step,
             y: cur.y + dy * step,
             scale: cur.scale || 0.8,

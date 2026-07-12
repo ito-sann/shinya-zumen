@@ -12,6 +12,7 @@
   const LAYERS = {
     plan:      { label: '平面図' },
     kyuseki:   { label: '求積図' },
+    kyusekihyo: { label: '求積表' }, // 手入力の計算表だけを載せる専用ページ
     lighting:  { label: '照明・音響設備図' },
     furnviews: { label: '備品姿図' },
   };
@@ -1199,6 +1200,7 @@
   function sheetTableLabel(layer) {
     return {
       kyuseki: '求積図の表',
+      kyusekihyo: '求積表(手入力)',
       lighting: '照明・音響設備一覧表',
     }[layer] || '図面上の表';
   }
@@ -1297,8 +1299,10 @@
     const s = fitScale * userScale;
 
     const w = W * s, h = H * s;
-    const defaultX0 = avX + avW - margin - w;
-    const defaultY0 = avY + avH - margin - h;
+    // 既定の置き場所: 図面に重ねる表は右下、求積表ページ(表が主役)は左上
+    const topLeft = layoutKey === 'kyusekihyo';
+    const defaultX0 = topLeft ? avX + margin : avX + avW - margin - w;
+    const defaultY0 = topLeft ? avY + margin : avY + avH - margin - h;
     const savedHasPos = Number.isFinite(saved.x) && Number.isFinite(saved.y);
     const savedPt = savedHasPos ? worldToScreen(saved.x, saved.y) : null;
     const x0 = savedPt ? savedPt.x : defaultX0;
@@ -1355,6 +1359,41 @@
     drawCornerTables(ctx, canvas, project, kyusekiSheetTables(project, currentLayer), null, currentLayer);
   }
 
+  /* 求積表(手入力)ページ: 手で入力した行(名称・計算式・グループ)から
+   * 表を組み立てて用紙に描く。表はドラッグで移動・右下ハンドルで拡縮できる。 */
+  function drawManualKyusekiSheet(ctx, canvas, project) {
+    const d = global.Geometry.manualKyusekiData(project);
+    const fmt = (v, digits) => (v == null ? '—' : v.toFixed(digits));
+    const cols = ['符号', '部分の名称', '計算式', '面積(㎡)'];
+    const align = ['center', 'left', 'left', 'right'];
+    const tables = d.groups.map((g) => ({
+      title: g.title, cols, align,
+      rows: g.rows.map((r) => [r.code, r.name, r.expr, fmt(r.value, d.digits)]),
+      foot: [g.subtotalLabel, '', g.rows.map((r) => r.code).join('+'), fmt(g.subtotal, d.digits) + ' ㎡'],
+    }));
+    if (d.rows.length) {
+      // 最後に営業所全体の合計(常に小数第2位)
+      tables.push({
+        title: '営業所求積表', cols, align,
+        rows: [],
+        foot: ['営業所面積(合計)', '', d.rows.map((r) => r.code).join('+'), d.total.toFixed(2) + ' ㎡'],
+      });
+    }
+    if (!tables.length) {
+      ctx.save();
+      ctx.fillStyle = '#64748b';
+      ctx.font = `${Math.max(12, wpx(280))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const f = paperFrameWorld(project);
+      const p = worldToScreen(f.x + f.w / 2, f.y + f.h / 2);
+      ctx.fillText('右の「求積表」欄で行を追加すると、ここに計算表が表示されます', p.x, p.y);
+      ctx.restore();
+      return;
+    }
+    drawCornerTables(ctx, canvas, project, tables, null, 'kyusekihyo');
+  }
+
   /* 用紙枠(用紙サイズ×縮尺がカバーする実寸範囲)をワールド座標で返す。
    * 例: A4横・1/50 → 297mm×50 = 14850mm ×、210mm×50 = 10500mm。原点は(0,0)。 */
   function paperFrameWorld(project) {
@@ -1392,7 +1431,8 @@
       tl.x, tl.y - wpx(90));
     // 右下: スケールバー(黒線の長さ = 図面上の1m)と縮尺表示。各部も実寸基準。
     // 備品姿図・照明音響設備図は右下に一覧表を置くため、縮尺バーは非表示にする。
-    if (currentLayer !== 'furnviews' && currentLayer !== 'lighting') {
+    // 求積表(手入力)ページも図面が無いので縮尺バーは出さない。
+    if (currentLayer !== 'furnviews' && currentLayer !== 'lighting' && currentLayer !== 'kyusekihyo') {
       const barLen = wpx(1000); // 1m分の画面上の長さ
       const bx2 = br.x - wpx(280), bx1 = bx2 - barLen;
       const by = br.y - wpx(620); // 下のラベルが枠線にかからない高さ
@@ -2038,6 +2078,10 @@
       case 'lighting':
         return { regionsFill: false, allRegions: true, regionTypes: null,
                  furniture: false, fittings: false, fixtures: true, dims: false, table: 'fixtures' };
+      case 'kyusekihyo':
+        // 求積表(手入力): 図面は描かず、手で入力した計算表だけを載せる
+        return { regionsFill: false, allRegions: false, regionTypes: [],
+                 furniture: false, fittings: false, fixtures: false, dims: false, table: false };
       case 'furnviews':
         // 備品姿図: 間取りは描かず、備品の正面図・側面図だけを並べる
         return { regionsFill: false, allRegions: false, regionTypes: [],
@@ -2069,6 +2113,12 @@
     drawGrid(ctx, canvas);
     if (project.meta.showPaperFrame && !(opts && opts.hidePaperFrame)) {
       drawPaperFrame(ctx, project);
+    }
+
+    // 求積表(手入力)は図面を描かず、計算表だけを用紙に置いて終わる
+    if (currentLayer === 'kyusekihyo') {
+      drawManualKyusekiSheet(ctx, canvas, project);
+      return;
     }
 
     // 備品姿図は間取りを描かず、姿図シートとメモだけを描いて終わる

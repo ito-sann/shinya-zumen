@@ -1218,11 +1218,119 @@
       </table>`;
   }
 
+  /* 手入力の求積表(「求積表」ページ)の編集欄。
+   * 名称・計算式・グループを行ごとに入力し、面積・小計・合計は自動計算する。 */
+  function manualKyusekiEditorHtml() {
+    const d = G.manualKyusekiData(project);
+    const fmt = (v) => (v == null ? '—' : v.toFixed(d.digits));
+    let html = `
+      <p class="muted">名称と計算式(例: 4.50×3.20、三角形は 1.20×0.80÷2)を入力すると、面積と合計を自動計算します。図面の区画とは連動しません。表はキャンバス上でドラッグ移動・右下ハンドルで拡縮できます。</p>
+      <label class="field">各行の面積の桁数
+        <select id="mkDigits">
+          <option value="2"${d.digits === 2 ? ' selected' : ''}>小数第2位まで(第3位を四捨五入)</option>
+          <option value="4"${d.digits === 4 ? ' selected' : ''}>小数第4位まで(第5位を四捨五入)</option>
+        </select></label>
+      <p class="muted">営業所面積(合計)は常に小数第2位までです。</p>`;
+    d.rows.forEach((r, i) => {
+      html += `<div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:6px">
+        <div class="prop-row"><span>${r.code} 名称</span><input type="text" data-mk-name="${i}" value="${esc(r.name)}" placeholder="例: 客室"></div>
+        <div class="prop-row"><span>計算式</span><input type="text" data-mk-expr="${i}" value="${esc(r.expr)}" placeholder="例: 4.50×3.20"></div>
+        <div class="prop-row"><span>グループ</span><select data-mk-group="${i}">
+          <option value="kyakushitsu"${r.group === 'kyakushitsu' ? ' selected' : ''}>客室</option>
+          <option value="chubo"${r.group === 'chubo' ? ' selected' : ''}>調理場</option>
+          <option value="other"${r.group === 'other' ? ' selected' : ''}>その他(通路・トイレ等)</option>
+        </select></div>
+        <div class="prop-row"><span>面積</span><b data-mk-val="${i}">${fmt(r.value)} ㎡</b></div>
+        <div class="add-row">
+          <button class="btn small" data-mk-up="${i}" title="上へ">↑</button>
+          <button class="btn small" data-mk-down="${i}" title="下へ">↓</button>
+          <button class="btn small danger" data-mk-del="${i}">削除</button>
+        </div>
+      </div>`;
+    });
+    html += `<button class="btn block" id="mkAdd">行を追加</button>`;
+    html += `<div class="kyuseki-title" style="margin-top:12px">合計(自動計算)</div>`;
+    [['kyakushitsu', '客室合計'], ['chubo', '調理場合計'], ['other', 'その他合計']].forEach(([key, label]) => {
+      const g = d.groups.find((x) => x.key === key);
+      html += `<div class="prop-row"><span>${label}</span><b data-mk-sub="${key}">${g ? fmt(g.subtotal) : '—'} ㎡</b></div>`;
+    });
+    html += `<div class="prop-row"><span>営業所面積(合計)</span><b id="mkTotal">${d.total.toFixed(2)} ㎡</b></div>`;
+    return html;
+  }
+
+  function bindManualKyusekiInputs() {
+    const box = $('kyusekiBox');
+    const mk = project.meta.manualKyuseki = project.meta.manualKyuseki || { digits: 2, rows: [] };
+    // 式の入力中は編集欄を作り直さず、計算結果の表示だけを更新する(フォーカスを失わないため)
+    const refreshComputed = () => {
+      const d = G.manualKyusekiData(project);
+      const fmt = (v) => (v == null ? '—' : v.toFixed(d.digits));
+      d.rows.forEach((r, i) => {
+        const el = box.querySelector(`[data-mk-val="${i}"]`);
+        if (el) el.textContent = fmt(r.value) + ' ㎡';
+      });
+      ['kyakushitsu', 'chubo', 'other'].forEach((k) => {
+        const g = d.groups.find((x) => x.key === k);
+        const el = box.querySelector(`[data-mk-sub="${k}"]`);
+        if (el) el.textContent = (g ? fmt(g.subtotal) : '—') + ' ㎡';
+      });
+      const t = box.querySelector('#mkTotal');
+      if (t) t.textContent = d.total.toFixed(2) + ' ㎡';
+    };
+    const digitsSel = box.querySelector('#mkDigits');
+    if (digitsSel) digitsSel.onchange = (e) => {
+      mk.digits = parseInt(e.target.value, 10) === 4 ? 4 : 2;
+      renderKyuseki(); draw();
+    };
+    box.querySelectorAll('[data-mk-name]').forEach((inp) => {
+      inp.oninput = (e) => { mk.rows[+inp.dataset.mkName].name = e.target.value; draw(); };
+    });
+    box.querySelectorAll('[data-mk-expr]').forEach((inp) => {
+      inp.oninput = (e) => { mk.rows[+inp.dataset.mkExpr].expr = e.target.value; refreshComputed(); draw(); };
+    });
+    box.querySelectorAll('[data-mk-group]').forEach((sel) => {
+      sel.onchange = (e) => { mk.rows[+sel.dataset.mkGroup].group = e.target.value; renderKyuseki(); draw(); };
+    });
+    box.querySelectorAll('[data-mk-del]').forEach((b) => {
+      b.onclick = () => { mk.rows.splice(+b.dataset.mkDel, 1); renderKyuseki(); draw(); };
+    });
+    box.querySelectorAll('[data-mk-up]').forEach((b) => {
+      b.onclick = () => {
+        const i = +b.dataset.mkUp;
+        if (i <= 0) return;
+        const [r] = mk.rows.splice(i, 1);
+        mk.rows.splice(i - 1, 0, r);
+        renderKyuseki(); draw();
+      };
+    });
+    box.querySelectorAll('[data-mk-down]').forEach((b) => {
+      b.onclick = () => {
+        const i = +b.dataset.mkDown;
+        if (i >= mk.rows.length - 1) return;
+        const [r] = mk.rows.splice(i, 1);
+        mk.rows.splice(i + 1, 0, r);
+        renderKyuseki(); draw();
+      };
+    });
+    const add = box.querySelector('#mkAdd');
+    if (add) add.onclick = () => {
+      mk.rows.push({
+        id: 'mk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        name: '', expr: '', group: 'kyakushitsu',
+      });
+      renderKyuseki(); draw();
+      const names = $('kyusekiBox').querySelectorAll('[data-mk-name]');
+      if (names.length) names[names.length - 1].focus();
+    };
+  }
+
   function renderKyuseki() {
     const layer = R.getLayer();
     // 見出しもページに合わせる(照明音響図=設備一覧表 / 備品姿図=備品一覧表)
     $('kyusekiHead').textContent =
-      layer === 'lighting' ? '設備一覧表' : (layer === 'furnviews' ? '備品一覧表' : '求積表');
+      layer === 'lighting' ? '設備一覧表'
+        : (layer === 'furnviews' ? '備品一覧表'
+          : (layer === 'kyusekihyo' ? '求積表(手入力)' : '求積表'));
     // 「計算過程を図面に載せる」ボタンは求積図でだけ出す
     $('kyusekiToggleRow').style.display = layer === 'kyuseki' ? '' : 'none';
     let html;
@@ -1230,6 +1338,8 @@
       html = fixtureTableHtml();
     } else if (layer === 'furnviews') {
       html = furnTableHtml();
+    } else if (layer === 'kyusekihyo') {
+      html = manualKyusekiEditorHtml();
     } else {
       // 平面図・求積図: 営業所(方式に応じて内法/壁芯)・客室・調理場の求積表をまとめて出す
       const method = project.meta.premisesMethod || 'regions';
@@ -1247,6 +1357,7 @@
     }
     $('kyusekiBox').innerHTML = html;
     if (layer === 'lighting') bindFixtureCountInputs();
+    if (layer === 'kyusekihyo') bindManualKyusekiInputs();
   }
 
   function bindFixtureCountInputs() {
