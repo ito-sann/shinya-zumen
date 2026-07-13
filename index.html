@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.81.0">
+  <link rel="stylesheet" href="css/style.css?v=1.82.0">
 </head>
 <body>
   <header class="topbar">
@@ -48,37 +48,39 @@
       </section>
 
       <section class="group" data-layers="plan kyuseki">
-        <h3>区画を追加</h3>
-        <div class="add-row">
-          <select id="regionType"></select>
-          <button id="btnAddRegion" class="btn small">追加</button>
-        </div>
+        <h3>囲い線を描く</h3>
         <div class="size-row">
-          <label>形
-            <select id="regionShape">
-              <option value="rect">長方形</option>
-              <option value="triangle">三角形</option>
-              <option value="trapezoid">台形</option>
+          <label>線色
+            <select id="regionLineColor">
+              <option value="">標準(黒)</option>
+              <option value="#1d4ed8">青</option>
+              <option value="#e53935">赤</option>
+              <option value="#2e7d32">緑</option>
+            </select>
+          </label>
+          <label>線種
+            <select id="regionLineStyle">
+              <option value="solid">実線</option>
+              <option value="dotted">点線</option>
+              <option value="dashed">破線</option>
             </select>
           </label>
         </div>
-        <div class="size-row">
-          <label>幅/底辺 <input type="number" id="regionW" value="3200" step="100"> mm</label>
-          <label>奥行/高さ <input type="number" id="regionH" value="2000" step="100"> mm</label>
-        </div>
-        <div class="size-row" id="regionW2Row" style="display:none">
-          <label>上底(台形) <input type="number" id="regionW2" value="1600" step="100"> mm</label>
-        </div>
-        <label class="field">線色(囲い線)
-          <select id="regionLineColor">
-            <option value="">標準(黒)</option>
-            <option value="#1d4ed8">青</option>
-            <option value="#e53935">赤</option>
-            <option value="#2e7d32">緑</option>
-          </select>
-        </label>
         <button id="btnDrawPoly" class="btn block">多角形で描く</button>
-        <p class="muted">L字や斜め壁など自由な形は、キャンバス上で角をクリックして囲います(面積は座標法で自動計算)。線色はここで選んだ色で追加され、あとから「選択中の要素」で好きな色に変えられます(線種・辺ごとの表示も同様)。</p>
+        <p class="muted">客室・営業所などの範囲を示す囲い線です。キャンバス上で角をクリックして囲います(最初の点をクリック・ダブルクリック・Enterで確定)。面積計算には入りません。色・線種・表示する図面(平面図/求積図)はあとから「選択中の要素」で変えられます。</p>
+        <!-- 旧「区画を追加」の入力欄(仕組み残置のため非表示)。過去の案件の区画は今まで通り表示・編集できる -->
+        <div style="display:none">
+          <select id="regionType"></select>
+          <button id="btnAddRegion" class="btn small">追加</button>
+          <select id="regionShape">
+            <option value="rect">長方形</option>
+            <option value="triangle">三角形</option>
+            <option value="trapezoid">台形</option>
+          </select>
+          <input type="number" id="regionW" value="3200" step="100">
+          <input type="number" id="regionH" value="2000" step="100">
+          <div id="regionW2Row"><input type="number" id="regionW2" value="1600" step="100"></div>
+        </div>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -293,7 +295,8 @@
 
     <!-- 右:プロパティ・面積・注意 -->
     <aside class="panel right">
-      <section class="group" data-layers="plan kyuseki">
+      <!-- 面積サマリーは区画の自動計算とセットの機能のため、手入力の求積表への移行に伴い非表示(仕組みは残置) -->
+      <section class="group" style="display:none">
         <h3>面積サマリー</h3>
         <table class="summary" id="summaryTable"></table>
       </section>
@@ -349,13 +352,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.81.0"></script>
-  <script src="js/geometry.js?v=1.81.0"></script>
-  <script src="js/render.js?v=1.81.0"></script>
-  <script src="js/interactions.js?v=1.81.0"></script>
-  <script src="js/print.js?v=1.81.0"></script>
-  <script src="js/forms.js?v=1.81.0"></script>
-  <script src="js/main.js?v=1.81.0"></script>
+  <script src="js/model.js?v=1.82.0"></script>
+  <script src="js/geometry.js?v=1.82.0"></script>
+  <script src="js/render.js?v=1.82.0"></script>
+  <script src="js/interactions.js?v=1.82.0"></script>
+  <script src="js/print.js?v=1.82.0"></script>
+  <script src="js/forms.js?v=1.82.0"></script>
+  <script src="js/main.js?v=1.82.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

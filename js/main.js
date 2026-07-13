@@ -491,23 +491,28 @@
     $('regionShape').onchange = (e) => {
       $('regionW2Row').style.display = e.target.value === 'trapezoid' ? '' : 'none';
     };
-    // 多角形の作図モード(クリックで頂点を置いて囲う)。
+    // 囲い線の作図モード(クリックで頂点を置いて囲う)。
+    // 面積計算には入れない「表示だけの線」として作る(区画の仕組みを流用)。
     // 作図中にもう一度押すと: 3点以上なら確定、未満なら中止。
     $('btnDrawPoly').onclick = () => {
       if (state.draft) {
-        if (state.draftKind !== 'region') return; // 外周の作図中は区画ボタンを無効に
+        if (state.draftKind !== 'region') return; // 外周の作図中は囲い線ボタンを無効に
         if (state.draft.points.length >= 3) I.finishPolygon(state);
         else I.cancelPolygon(state);
         draw();
         return;
       }
-      const type = $('regionType').value;
-      ensureRegionVisible(type); // 今のレイヤーで見えない種類なら平面図へ切り替え
+      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
       state.draftKind = 'region';
       I.beginPolygon(state, (pts) => {
-        const r = M.addPolygonRegion(project, type, pts);
+        const r = M.addPolygonRegion(project, 'other', pts);
+        r.label = '囲い線';
+        r.areaUse = 'display'; // 面積計算には入れない(表示のみ)
         const lc = $('regionLineColor').value;
         if (lc) r.boundaryColor = lc;
+        const ls = $('regionLineStyle') ? $('regionLineStyle').value : 'solid';
+        if (ls && ls !== 'solid') r.boundaryLineStyle = ls;
+        r.layers = ['plan', 'kyuseki'];
         state.selectedId = r.id;
         refresh(); showProps(r);
       });

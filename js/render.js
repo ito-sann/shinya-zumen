@@ -1391,7 +1391,12 @@
       ctx.restore();
       return;
     }
-    drawCornerTables(ctx, canvas, project, tables, null, 'kyusekihyo');
+    // 端書き: 客室の床面積要件(風営法施行規則)を表の下に注記する
+    const notes = [
+      '※ 客室を2室以上設ける場合は、各客室の床面積を9.5㎡以上とすること(風営法施行規則)。',
+      '   客室が1室のみの場合、この床面積の下限はない。',
+    ];
+    drawCornerTables(ctx, canvas, project, tables, notes, 'kyusekihyo');
   }
 
   /* 用紙枠(用紙サイズ×縮尺がカバーする実寸範囲)をワールド座標で返す。
