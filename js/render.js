@@ -2225,10 +2225,9 @@
     if ((currentLayer === 'kyuseki' || currentLayer === 'plan') && project.premise) {
       drawPremiseCenterline(ctx, project);
     }
-    // 求積表(計算過程)を図面そのものに重ねる(求積図のみ・設定で切替)
-    if (currentLayer === 'kyuseki' && project.meta.showKyusekiTable !== false) {
-      drawKyusekiTable(ctx, canvas, project);
-    }
+    // 自動計算の求積表(計算過程)の重ね表示は廃止した。
+    // 求積は「求積表」タブの手入力の表(drawManualKyusekiSheet)に移行。
+    // drawKyusekiTable などの仕組みは、必要になれば戻せるよう残してある。
     // 手動の寸法線・メモは上の重なり順に含めて描く
     // 寸法線の作図中プレビュー
     if (state.measure) drawMeasureDraft(ctx, state.measure);

@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.80.0">
+  <link rel="stylesheet" href="css/style.css?v=1.81.0">
 </head>
 <body>
   <header class="topbar">
@@ -94,7 +94,8 @@
             </select>
           </label>
         </div>
-        <label class="field">営業所求積の方式
+        <!-- 営業所求積の方式(座標法など)は自動求積とセットの機能のため、手入力の求積表への移行に伴い非表示(仕組みは残置) -->
+        <label class="field" style="display:none">営業所求積の方式
           <select id="premMethod">
             <option value="regions">区画の合計(内法)</option>
             <option value="centerline">壁芯の外周(座標法)</option>
@@ -105,7 +106,7 @@
           <label>壁から <input type="number" id="premiseBoundaryGap" value="10" step="10" min="0"> mm内側</label>
         </div>
         <button id="btnPremiseBoundary" class="btn block">内側に囲い線を自動作成</button>
-        <p class="muted">営業所の求積を壁芯で求める警察署向け。「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます。方式は署のローカルルールに合わせて選べます。「内側に囲い線を自動作成」は、壁の内面から指定した距離(実寸)だけ内側に、営業所全体を示す青い囲い線(面積に入れない線)を作ります。</p>
+        <p class="muted">「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます(壁芯線は平面図・求積図に表示)。「内側に囲い線を自動作成」は、壁の内面から指定した距離(実寸)だけ内側に、営業所全体を示す青い囲い線(面積に入れない線)を作ります。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -177,8 +178,9 @@
           <select id="fittingKind"></select>
           <button id="btnAddFitting" class="btn small">追加</button>
         </div>
-        <label class="check-row"><input type="checkbox" id="deductPillars"> 柱の面積を区画の面積から差し引く</label>
-        <p class="muted">柱は「区画を追加」から追加します。チェックすると、柱が立っている区画(客室・調理場など)の求積表に「△0.09㎡」のような控除行が入り、合計から差し引かれます。扱いは警察署により異なるため切り替え式です。</p>
+        <!-- 柱の面積控除は自動求積とセットの機能のため、手入力の求積表への移行に伴い非表示(仕組みは残置) -->
+        <label class="check-row" style="display:none"><input type="checkbox" id="deductPillars"> 柱の面積を区画の面積から差し引く</label>
+        <p class="muted">柱は「区画を追加」から追加します。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -347,13 +349,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.80.0"></script>
-  <script src="js/geometry.js?v=1.80.0"></script>
-  <script src="js/render.js?v=1.80.0"></script>
-  <script src="js/interactions.js?v=1.80.0"></script>
-  <script src="js/print.js?v=1.80.0"></script>
-  <script src="js/forms.js?v=1.80.0"></script>
-  <script src="js/main.js?v=1.80.0"></script>
+  <script src="js/model.js?v=1.81.0"></script>
+  <script src="js/geometry.js?v=1.81.0"></script>
+  <script src="js/render.js?v=1.81.0"></script>
+  <script src="js/interactions.js?v=1.81.0"></script>
+  <script src="js/print.js?v=1.81.0"></script>
+  <script src="js/forms.js?v=1.81.0"></script>
+  <script src="js/main.js?v=1.81.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

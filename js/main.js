@@ -1326,34 +1326,28 @@
 
   function renderKyuseki() {
     const layer = R.getLayer();
+    // 平面図・求積図では自動計算の求積表を出さない(求積は「求積表」タブの手入力へ移行)。
+    // 欄ごと隠し、照明・音響図/備品姿図/求積表タブのときだけ表示する。
+    const section = $('kyusekiBox').closest('section');
+    const showSection = ['lighting', 'furnviews', 'kyusekihyo'].indexOf(layer) >= 0;
+    if (section) section.style.display = showSection ? '' : 'none';
+    // 「計算過程を図面に載せる」も自動求積表と一緒に廃止(仕組みは残置)
+    $('kyusekiToggleRow').style.display = 'none';
+    if (!showSection) {
+      $('kyusekiBox').innerHTML = '';
+      return;
+    }
     // 見出しもページに合わせる(照明音響図=設備一覧表 / 備品姿図=備品一覧表)
     $('kyusekiHead').textContent =
       layer === 'lighting' ? '設備一覧表'
-        : (layer === 'furnviews' ? '備品一覧表'
-          : (layer === 'kyusekihyo' ? '求積表(手入力)' : '求積表'));
-    // 「計算過程を図面に載せる」ボタンは求積図でだけ出す
-    $('kyusekiToggleRow').style.display = layer === 'kyuseki' ? '' : 'none';
+        : (layer === 'furnviews' ? '備品一覧表' : '求積表(手入力)');
     let html;
     if (layer === 'lighting') {
       html = fixtureTableHtml();
     } else if (layer === 'furnviews') {
       html = furnTableHtml();
-    } else if (layer === 'kyusekihyo') {
-      html = manualKyusekiEditorHtml();
     } else {
-      // 平面図・求積図: 営業所(方式に応じて内法/壁芯)・客室・調理場の求積表をまとめて出す
-      const method = project.meta.premisesMethod || 'regions';
-      const parts = [];
-      if (method !== 'regions') parts.push(premiseKyusekiHtml());
-      if (method !== 'centerline') {
-        parts.push(kyusekiTableHtml(
-          method === 'both' ? '営業所求積表(内法・区画合計)' : '営業所求積表',
-          G.buildTable(project, null)));
-      }
-      parts.push(kyusekiTableHtml('客室求積表', G.buildTable(project, ['kyakushitsu'])));
-      parts.push(kyusekiTableHtml('調理場求積表', G.buildTable(project, ['chubo'])));
-      parts.push(coordTablesHtml(null));
-      html = parts.join('');
+      html = manualKyusekiEditorHtml();
     }
     $('kyusekiBox').innerHTML = html;
     if (layer === 'lighting') bindFixtureCountInputs();
