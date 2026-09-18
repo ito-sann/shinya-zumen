@@ -188,27 +188,6 @@
     ctx.closePath();
   }
 
-  function counterLPoints(w, h, t, mirror) {
-    if (mirror) {
-      return [
-        [-w / 2, -h / 2],
-        [w / 2, -h / 2],
-        [w / 2, h / 2],
-        [w / 2 - t, h / 2],
-        [w / 2 - t, -h / 2 + t],
-        [-w / 2, -h / 2 + t],
-      ];
-    }
-    return [
-      [-w / 2, -h / 2],
-      [w / 2, -h / 2],
-      [w / 2, -h / 2 + t],
-      [-w / 2 + t, -h / 2 + t],
-      [-w / 2 + t, h / 2],
-      [-w / 2, h / 2],
-    ];
-  }
-
   /* 多角形区画の頂点を画面座標で返す */
   function polygonScreenPts(r) {
     return global.Geometry.polygonAbsPoints(r).map((p) => worldToScreen(p.x, p.y));
@@ -531,7 +510,7 @@
     ctx.textBaseline = 'middle';
     ctx.fillText(f.label + num, cx, cy);
     // 選択中は頂点ハンドル(ドラッグで形を修正できる)
-    if (opts.selected) {
+    if (opts.selected && opts.handles !== false) {
       for (const p of pts) {
         ctx.fillStyle = '#fff';
         ctx.strokeStyle = '#d32f2f';
@@ -556,10 +535,12 @@
     ctx.lineWidth = opts.selected ? 3 : 1.5;
     ctx.strokeStyle = opts.selected ? '#d32f2f' : (over ? '#c62828' : '#555');
     const isL = f.kind === 'counterL';
+    const lDimensions = isL ? global.Geometry.counterLDimensions(f) : null;
     if (isL) {
       // L字: 上辺が横の腕。mirrorL で縦の腕を左右反転する。
-      const t = Math.min(f.t || 600, f.w, f.h) * view.zoom;
-      tracePoly(ctx, counterLPoints(w, h, t, f.mirrorL === true));
+      const pts = global.Geometry.counterLPoints(f).map((point) =>
+        [(point.x - f.w / 2) * view.zoom, (point.y - f.h / 2) * view.zoom]);
+      tracePoly(ctx, pts);
       ctx.fill();
       ctx.stroke();
     } else {
@@ -570,8 +551,8 @@
     // 番号(①②…)はサイズ違いの区別用(同じ種類・同じ寸法なら同じ番号)
     const fpx = fontPx(200, f);
     // L字はくり抜き部分を避けて上の腕の中央にラベルを置く
-    const labelY = isL ? -h / 2 + Math.min(f.t || 600, f.w, f.h) * view.zoom / 2 : 0;
-    const fitH = isL ? Math.min(f.t || 600, f.w, f.h) * view.zoom : h;
+    const labelY = isL ? -h / 2 + lDimensions.tTop * view.zoom / 2 : 0;
+    const fitH = isL ? lDimensions.tTop * view.zoom : h;
     if (Math.min(w, fitH) > fpx * 1.7) {
       const num = opts.num ? global.Geometry.code(opts.num) : '';
       ctx.fillStyle = '#333';
@@ -581,6 +562,19 @@
       fillTextUpright(ctx, (f.rotation || 0) * Math.PI / 180, 0, labelY, f.label + num);
     }
     ctx.restore();
+    if (isL && opts.selected && opts.handles !== false) {
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#d32f2f';
+      ctx.lineWidth = 1.5;
+      for (const point of global.Geometry.counterLWorldPoints(f)) {
+        const handle = worldToScreen(point.x, point.y);
+        ctx.beginPath();
+        ctx.rect(handle.x - 4, handle.y - 4, 8, 8);
+        ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   /* 扉・戸の製図記号を「基準向き」で描く(片開き=ヒンジ左・上開き)。
@@ -2214,7 +2208,12 @@
         if (fittingVisibleOnLayer(el, currentLayer)) drawFitting(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'furniture') {
         if (vis.furniture || (vis.counterFurniture && isCounterFurniture(el))) {
-          drawFurniture(ctx, el, { selected: state.selectedId === el.id, num: furnitureNums[el.id] });
+          drawFurniture(ctx, el, {
+            selected: currentSelectedId === el.id,
+            handles: !state.draft && !state.measure && !state.underlayMove &&
+              (!state.selectFilter || state.selectFilter === 'all' || state.selectFilter === 'furniture'),
+            num: furnitureNums[el.id],
+          });
         }
       } else if (item.kind === 'fixtures') {
         if (vis.fixtures) drawFixture(ctx, el, { selected: state.selectedId === el.id });

@@ -48,6 +48,93 @@
     });
   }
 
+  /* 定型L字カウンター。旧データの t は両腕共通・幅/奥行の小さい方が上限。
+   * tTop/tSide を省略したときだけ、その従来の輪郭へフォールバックする。 */
+  function counterLDimensions(f) {
+    const positive = (n, fallback) => Number.isFinite(n) && n > 0 ? n : fallback;
+    const w = positive(f.w, 1), h = positive(f.h, 1);
+    const legacy = Math.min(positive(f.t, 600), w, h);
+    return {
+      w, h,
+      tTop: Math.min(positive(f.tTop, legacy), h),
+      tSide: Math.min(positive(f.tSide, legacy), w),
+    };
+  }
+
+  function counterLLimits(previous) {
+    const d = counterLDimensions(previous);
+    // 既存の10mm未満の腕や隙間も、編集開始時に拡大しない。
+    return {
+      minTop: Math.min(10, d.tTop), minSide: Math.min(10, d.tSide),
+      gapX: Math.min(10, d.w - d.tSide), gapY: Math.min(10, d.h - d.tTop),
+    };
+  }
+
+  /* 数値入力後の正規化。previous は変更前のコピーを渡す。
+   * 読み込み時には実行せず、既存図面の寸法と輪郭をそのまま保つ。 */
+  function normalizeCounterL(f, previous) {
+    previous = previous || f;
+    const old = counterLDimensions(previous);
+    const limits = counterLLimits(previous);
+    const value = (n, fallback) => Number.isFinite(n) ? n : fallback;
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    f.w = Math.max(limits.minSide + limits.gapX, value(f.w, old.w));
+    f.h = Math.max(limits.minTop + limits.gapY, value(f.h, old.h));
+    f.tTop = clamp(value(f.tTop, old.tTop), limits.minTop, f.h - limits.gapY);
+    f.tSide = clamp(value(f.tSide, old.tSide), limits.minSide, f.w - limits.gapX);
+    return counterLDimensions(f);
+  }
+
+  /* 頂点番号は反転しても同じ意味:
+   * 0=外側の曲がり角、1/2=横腕先端、3=内角、4/5=縦腕先端。 */
+  function counterLPoints(f) {
+    const { w, h, tTop, tSide } = counterLDimensions(f);
+    const pts = [
+      { x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: tTop },
+      { x: tSide, y: tTop }, { x: tSide, y: h }, { x: 0, y: h },
+    ];
+    return f.mirrorL === true ? pts.map((p) => ({ x: w - p.x, y: p.y })) : pts;
+  }
+
+  function counterLWorldPoints(f) {
+    return polygonAbsPoints(Object.assign({}, f, { points: counterLPoints(f) }));
+  }
+
+  /* ドラッグ開始時の固定座標系で寸法を決め、固定辺が動かないよう中心を補正。
+   * snapUnit=0 は吸着なし。回転中も各腕の寸法に対してmm単位で吸着する。 */
+  function resizeCounterL(f, start, index, worldPoint, snapUnit) {
+    if (index < 0 || index > 5 || !Number.isFinite(worldPoint.x) || !Number.isFinite(worldPoint.y)) return;
+    const d = counterLDimensions(start), limits = counterLLimits(start);
+    const angle = (start.rotation || 0) * Math.PI / 180;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const cx = start.x + d.w / 2, cy = start.y + d.h / 2;
+    const dx = worldPoint.x - cx, dy = worldPoint.y - cy;
+    let px = dx * cos + dy * sin + d.w / 2;
+    const py = -dx * sin + dy * cos + d.h / 2;
+    if (start.mirrorL === true) px = d.w - px;
+    const snapped = (n) => snapUnit > 0 ? Math.round(n / snapUnit) * snapUnit : n;
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    let left = 0, top = 0, w = d.w, h = d.h, tTop = d.tTop, tSide = d.tSide;
+    if (index === 0) {
+      w = Math.max(d.tSide + limits.gapX, snapped(d.w - px));
+      h = Math.max(d.tTop + limits.gapY, snapped(d.h - py));
+      left = d.w - w;
+      top = d.h - h;
+    } else {
+      if (index === 1 || index === 2) w = Math.max(d.tSide + limits.gapX, snapped(px));
+      if (index === 4 || index === 5) h = Math.max(d.tTop + limits.gapY, snapped(py));
+      if (index === 2 || index === 3) tTop = clamp(snapped(py), limits.minTop, h - limits.gapY);
+      if (index === 3 || index === 4) tSide = clamp(snapped(px), limits.minSide, w - limits.gapX);
+    }
+    const centerX = start.mirrorL === true ? d.w - (left + w / 2) : left + w / 2;
+    const centerY = top + h / 2;
+    const shiftX = centerX - d.w / 2, shiftY = centerY - d.h / 2;
+    f.x = cx + shiftX * cos - shiftY * sin - w / 2;
+    f.y = cy + shiftX * sin + shiftY * cos - h / 2;
+    f.w = w; f.h = h; f.tTop = tTop; f.tSide = tSide;
+    return counterLDimensions(f);
+  }
+
   /* 多角形の頂点を m(小数第2位=cm 単位)に変換した配列を返す。
    * 座標求積表の表示値と面積計算を一致させるため、必ず丸めた値を使う。 */
   function polygonPointsM(region) {
@@ -472,7 +559,13 @@
     }
     // 姿図スタイル(variant)も含める。未指定は既定スタイルとして揃える
     const variant = f.variant || global.Model.defaultStyle(f.kind) || '';
-    return `${f.kind}|${f.w}|${f.h}|${f.height || 0}|${variant}`;
+    const key = `${f.kind}|${f.w}|${f.h}|${f.height || 0}|${variant}`;
+    if (f.kind !== 'counterL') return key;
+    const d = counterLDimensions(f);
+    // 既定の左右非反転L字は従来キーを保ち、保存済み姿図の配置を引き継ぐ。
+    const defaultT = Math.min(600, d.w, d.h);
+    if (d.tTop === defaultT && d.tSide === defaultT && f.mirrorL !== true) return key;
+    return `${key}|L:${d.tTop}:${d.tSide}:${f.mirrorL === true ? 1 : 0}`;
   }
 
   function furnitureGroups(project) {
@@ -689,6 +782,7 @@
     isPillarRegion, areaUseForRegion, isPremisesAreaBoundary, hasPremisesAreaBoundary, hasAnyAreaBoundary,
     pointInRegion, pillarsInRegion, pillarDeductions, regionNetAreaSqm,
     polygonAbsPoints, polygonCalc, polygonEdgesM, polygonPointsM,
+    counterLDimensions, counterLPoints, counterLWorldPoints, normalizeCounterL, resizeCounterL,
     offsetPolygonAbs, offsetOpenPolylineAbs, wallOutlineAbs,
     premiseCenterlineAbs, premiseWallPolysAbs, premiseRegionLike, premiseCalc,
     furnitureGroups, furnitureNumberMap, furnKey,

@@ -113,12 +113,11 @@
   function inCounterL(wx, wy, el) {
     const p = localRotatedPoint(wx, wy, el);
     const lx = p.x, ly = p.y;
-    const w = el.w || 0, h = el.h || 0;
-    const t = Math.min(el.t || 600, w, h);
-    const inTopArm = lx >= -w / 2 && lx <= w / 2 && ly >= -h / 2 && ly <= -h / 2 + t;
+    const { w, h, tTop, tSide } = global.Geometry.counterLDimensions(el);
+    const inTopArm = lx >= -w / 2 && lx <= w / 2 && ly >= -h / 2 && ly <= -h / 2 + tTop;
     const inSideArm = el.mirrorL === true
-      ? lx >= w / 2 - t && lx <= w / 2 && ly >= -h / 2 && ly <= h / 2
-      : lx >= -w / 2 && lx <= -w / 2 + t && ly >= -h / 2 && ly <= h / 2;
+      ? lx >= w / 2 - tSide && lx <= w / 2 && ly >= -h / 2 && ly <= h / 2
+      : lx >= -w / 2 && lx <= -w / 2 + tSide && ly >= -h / 2 && ly <= h / 2;
     return inTopArm || inSideArm;
   }
 
@@ -277,11 +276,12 @@
     // 外さないとイベントが二重に処理され、頂点の重複追加や矢印キーの2倍移動が起きる。
     if (canvas._detachInteractions) canvas._detachInteractions();
 
-    let mode = null; // 'drag' | 'pan' | 'vertex' | 'north' | 'notetip' | 'underlay' | 'dimpt' | 'sheetTable' | 'sheetResize'
+    let mode = null; // 'drag' | 'pan' | 'vertex' | 'counterLVertex' | 'north' | 'notetip' | 'underlay' | 'dimpt' | 'sheetTable' | 'sheetResize'
     let last = null; // 直前のマウス位置(画面px)
     let dragTarget = null;
     let grabOffset = { x: 0, y: 0 }; // 要素原点とカーソルの差(mm)
     let vertexIndex = -1; // 頂点ドラッグ中の頂点番号
+    let counterLStart = null; // 回転/反転L字の固定基準(ドラッグ開始時の寸法)
     let dimSpan = { dx: 0, dy: 0 };  // 寸法線を動かすときの2点間ベクトル
     let dimEnd = 1;                  // 寸法線の端点ドラッグ中の端(1 or 2)
     let sheetResize = null;
@@ -296,17 +296,25 @@
       return { width: canvas._cssW || canvas.width, height: canvas._cssH || canvas.height };
     }
 
-    /* 選択中の多角形(区画・営業所外周)の頂点のうち、画面上で近い(8px以内)ものを探す */
+    /* 選択中の多角形・L字の頂点のうち、画面上で近い(8px以内)ものを探す */
     function findVertexAt(p) {
-      if (!state.selectedId) return null;
+      if (!state.selectedId || state.draft || state.measure || state.underlayMove) return null;
+      const layer = global.Render.getLayer();
+      if (layer === 'furnviews' || layer === 'kyusekihyo') return null;
       const found = global.Model.findById(project, state.selectedId);
-      if (!found || found.element.shape !== 'polygon' ||
+      if (!found ||
           (found.kind !== 'regions' && found.kind !== 'premise' && found.kind !== 'furniture' && found.kind !== 'walls' && found.kind !== 'lines')) return null;
+      if (!visibleForHit(project, found.kind, found.element) ||
+          !matchesSelectionFilter(found.element, found.kind, state.selectFilter)) return null;
       const r = found.element;
-      const pts = global.Geometry.polygonAbsPoints(r);
-      for (let i = 0; i < r.points.length; i++) {
+      const isCounterL = found.kind === 'furniture' && r.kind === 'counterL' && r.shape !== 'polygon';
+      if (!isCounterL && r.shape !== 'polygon') return null;
+      const pts = isCounterL ? global.Geometry.counterLWorldPoints(r) : global.Geometry.polygonAbsPoints(r);
+      for (let i = 0; i < pts.length; i++) {
         const s = global.Render.worldToScreen(pts[i].x, pts[i].y);
-        if (Math.hypot(p.x - s.x, p.y - s.y) <= 8) return { region: r, index: i };
+        if (Math.hypot(p.x - s.x, p.y - s.y) <= 8) {
+          return { region: r, index: i, isCounterL, point: pts[i] };
+        }
       }
       return null;
     }
@@ -434,12 +442,17 @@
         }
       }
 
-      // 選択中の多角形の頂点をつかんだら、頂点の移動モード
+      // 選択中の頂点をつかんだら、直角L字の伸縮または多角形の頂点移動
       const v = findVertexAt(p);
       if (v) {
-        mode = 'vertex';
+        mode = v.isCounterL ? 'counterLVertex' : 'vertex';
         dragTarget = v.region;
         vertexIndex = v.index;
+        if (v.isCounterL) {
+          counterLStart = Object.assign({}, dragTarget);
+          grabOffset = { x: w.x - v.point.x, y: w.y - v.point.y };
+          canvas.style.cursor = 'crosshair';
+        }
         last = p;
         return;
       }
@@ -516,7 +529,10 @@
         }
         return;
       }
-      if (!mode) return;
+      if (!mode) {
+        canvas.style.cursor = findVertexAt(p0) ? 'crosshair' : '';
+        return;
+      }
       const p = p0;
       if (mode === 'north') {
         // 方位記号の中心から見たカーソルの向き = 北の向き(360度)
@@ -524,6 +540,12 @@
         const deg = Math.atan2(p.x - nm.cx, -(p.y - nm.cy)) * 180 / Math.PI;
         project.meta.northAngle = Math.round((deg + 360) % 360);
         onChange();
+      } else if (mode === 'counterLVertex' && dragTarget && counterLStart) {
+        const w = global.Render.screenToWorld(p.x, p.y);
+        global.Geometry.resizeCounterL(dragTarget, counterLStart, vertexIndex,
+          { x: w.x - grabOffset.x, y: w.y - grabOffset.y }, e.shiftKey ? 0 : snapMm);
+        onChange();
+        onSelect(dragTarget);
       } else if (mode === 'vertex' && dragTarget) {
         // 頂点を動かして形を修正する(スナップあり・Shiftで自由)
         const w = global.Render.screenToWorld(p.x, p.y);
@@ -616,7 +638,8 @@
     };
 
     const onMouseUp = () => {
-      mode = null; dragTarget = null; vertexIndex = -1; sheetResize = null;
+      mode = null; dragTarget = null; vertexIndex = -1; sheetResize = null; counterLStart = null;
+      canvas.style.cursor = '';
     };
 
     // ダブルクリックでも多角形を確定できる(3点以上)

@@ -1583,12 +1583,18 @@
       });
     } else if (kind === 'furniture' || kind === 'fittings') {
       // (自由な形の備品はここを通らない。下の姿図ボタンへ続く)
-      html += propNum(kind === 'fittings' ? '長さ(mm)' : '幅(mm)', 'w', el.w);
-      html += propNum(kind === 'fittings' ? '厚み(mm)' : '奥行(mm)', 'h', el.h);
       if (el.kind === 'counterL') {
-        // L字カウンターの腕の幅(天板の奥行)と、縦の腕を左右どちらに出すかを調整できる
-        html += propNum('カウンター幅(mm)', 't', el.t || 600);
+        const dimensions = G.counterLDimensions(el);
+        html += '<p class="muted">角の□をドラッグすると伸ばす・縮める操作ができます。内側の角を動かすと、横側・縦側の太さを別々に調整できます。</p>';
+        [['横の長さ(mm)', 'w'], ['縦の長さ(mm)', 'h'],
+          ['横側の太さ(mm)', 'tTop'], ['縦側の太さ(mm)', 'tSide']].forEach(([label, field]) => {
+          html += `<label class="prop-row"><span>${label}</span><input type="number" min="1" step="10" data-counter-dimension="${field}" value="${dimensions[field]}"></label>`;
+        });
+        html += '<p class="muted">長さは外端から外端まで。横・縦は回転前の向きです。Shiftを押しながらドラッグすると、移動の単位に吸着せず調整できます。</p>';
         html += `<label class="check-row"><input type="checkbox" data-fieldbool="mirrorL" ${el.mirrorL ? 'checked' : ''}> L字の突起を左右反転</label>`;
+      } else {
+        html += propNum(kind === 'fittings' ? '長さ(mm)' : '幅(mm)', 'w', el.w);
+        html += propNum(kind === 'fittings' ? '厚み(mm)' : '奥行(mm)', 'h', el.h);
       }
       html += propNum('角度(度)', 'rotation', el.rotation || 0);
       if (kind === 'fittings') {
@@ -1752,6 +1758,26 @@
         <button class="btn small danger" id="btnDel">この要素を削除</button></div>`;
     }
     box.innerHTML = html;
+
+    // 入力途中の「4」等で腕を縮めないよう確定時に反映する。
+    // 編集前の腕幅を引き継ぎ、他方の長さ・太さを意図せず変えない。
+    box.querySelectorAll('[data-counter-dimension]').forEach((inp) => {
+      inp.addEventListener('change', () => {
+        const value = Number(inp.value);
+        if (Number.isFinite(value) && value > 0) {
+          const before = { ...el };
+          el[inp.dataset.counterDimension] = value;
+          G.normalizeCounterL(el, before);
+        }
+        refresh();
+        const dimensions = G.counterLDimensions(el);
+        box.querySelectorAll('[data-counter-dimension]').forEach((other) => {
+          other.value = dimensions[other.dataset.counterDimension];
+        });
+        const numEl = box.querySelector('#propFurnNum');
+        if (numEl) numEl.textContent = G.code(G.furnitureNumberMap(project)[el.id]);
+      });
+    });
 
     box.querySelectorAll('[data-field]').forEach((inp) => {
       inp.addEventListener('input', (e) => {

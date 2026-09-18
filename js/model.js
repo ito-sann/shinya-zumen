@@ -375,6 +375,7 @@
         /* 備品姿図でカードをドラッグして動かした位置(グループキー → {x, y})。
          * 空なら自動整列。ドラッグした備品だけ自動整列から外れて手動配置になる。 */
         furnViewPos: {},
+        counterLLayoutVersion: 1,
         /* 図面上に重ねる表(求積表・設備一覧表)の手動配置。
          * layer → {x, y, scale}。x/y は表の左上(mm)、scale は自動サイズに対する倍率。 */
         sheetTableLayouts: {},
@@ -602,7 +603,11 @@
     if (ds) item.variant = variant || ds;
     if (c.t) {
       item.t = c.t; // L字カウンター等の厚み
-      if (kind === 'counterL') item.mirrorL = false;
+      if (kind === 'counterL') {
+        item.mirrorL = false;
+        item.tTop = c.t; // 横腕の奥行
+        item.tSide = c.t; // 縦腕の幅
+      }
     }
     project.furniture.push(item);
     return item;
@@ -823,8 +828,60 @@
     return JSON.stringify(project, null, 2);
   }
 
+  /* L字の腕幅/左右反転で姿図グループが分かれる前の保存位置を一度だけ移行。
+   * Modelだけを読み込むJSON処理でも使えるよう、Geometryには依存しない。 */
+  function migrateCounterLViewPositions(project) {
+    const positions = project.meta.furnViewPos;
+    if (!positions || typeof positions !== 'object') return;
+    const groups = new Map();
+    for (const f of project.furniture) {
+      if (f.kind !== 'counterL' || f.shape === 'polygon') continue;
+      const oldKey = `${f.kind}|${f.w}|${f.h}|${f.height || 0}|${f.variant || defaultStyle(f.kind) || ''}`;
+      const saved = positions[oldKey];
+      if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) continue;
+      const positive = (n, fallback) => Number.isFinite(n) && n > 0 ? n : fallback;
+      const w = positive(f.w, 1), h = positive(f.h, 1);
+      const legacy = Math.min(positive(f.t, 600), w, h);
+      const tTop = Math.min(positive(f.tTop, legacy), h);
+      const tSide = Math.min(positive(f.tSide, legacy), w);
+      const defaultT = Math.min(600, w, h);
+      // Geometry.furnKeyと同じ互換キー。既定形だけは旧キーを使い続ける。
+      const key = tTop === defaultT && tSide === defaultT && f.mirrorL !== true
+        ? oldKey : `${oldKey}|L:${tTop}:${tSide}:${f.mirrorL === true ? 1 : 0}`;
+      if (!groups.has(oldKey)) groups.set(oldKey, new Map());
+      groups.get(oldKey).set(key, f);
+    }
+    for (const [oldKey, variants] of groups) {
+      const saved = positions[oldKey];
+      // 旧キーの標準形が残る場合は、その位置を優先して引き継ぐ。
+      const entries = Array.from(variants).sort(([a], [b]) => (a === oldKey ? -1 : b === oldKey ? 1 : 0));
+      const occupied = [];
+      for (const [key, f] of entries) {
+        const p = positions[key];
+        if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+          occupied.push({ x: p.x, y: p.y, w: 440 + Math.max(f.w + 400 + f.h, 2400),
+            h: 1990 + Math.max(f.height || 0, 400) });
+        }
+      }
+      for (const [key, f] of entries) {
+        if (positions[key]) continue;
+        const box = { x: saved.x, y: saved.y,
+          w: 440 + Math.max(f.w + 400 + f.h, 2400), h: 1990 + Math.max(f.height || 0, 400) };
+        // 旧1グループから分かれたカードを、同じ位置へ重ねず下に並べる。
+        let overlap;
+        while ((overlap = occupied.find((r) => box.x < r.x + r.w && box.x + box.w > r.x &&
+            box.y < r.y + r.h && box.y + box.h > r.y))) {
+          box.y = overlap.y + overlap.h + 550;
+        }
+        positions[key] = { x: box.x, y: box.y };
+        occupied.push(box);
+      }
+    }
+  }
+
   function deserialize(text) {
     const obj = JSON.parse(text);
+    const migrateCounterLLayout = !obj.meta || obj.meta.counterLLayoutVersion !== 1;
     // 最低限の妥当性チェックと補完
     const base = defaultProject();
     const project = Object.assign(base, obj);
@@ -925,6 +982,8 @@
       project._seq = 1 + project.regions.length + project.furniture.length +
                      project.fittings.length + project.fixtures.length;
     }
+    if (migrateCounterLLayout) migrateCounterLViewPositions(project);
+    project.meta.counterLLayoutVersion = 1;
     return project;
   }
 
