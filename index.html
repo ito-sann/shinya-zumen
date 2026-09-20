@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.83.2">
+  <link rel="stylesheet" href="css/style.css?v=1.83.3">
 </head>
 <body>
   <header class="topbar">
@@ -47,7 +47,7 @@
         <p class="muted">案件ごとにブラウザ内へ自動保存されます。案件名は店舗名から自動でつきます。パソコンの買い替えに備えて、ときどき「全案件をバックアップ」でファイルに書き出してください。</p>
       </section>
 
-      <section class="group" data-layers="plan kyuseki">
+      <section class="group" data-layers="plan kyuseki lighting">
         <h3>囲い線を描く</h3>
         <div class="size-row">
           <label>線色
@@ -67,7 +67,7 @@
           </label>
         </div>
         <button id="btnDrawPoly" class="btn block">多角形で描く</button>
-        <p class="muted">客室・営業所などの範囲を示す囲い線です。キャンバス上で角をクリックして囲います(最初の点をクリック・ダブルクリック・Enterで確定)。面積計算には入りません。色・線種・表示する図面(平面図/求積図)はあとから「選択中の要素」で変えられます。</p>
+        <p class="muted">客室・営業所などの範囲を示す囲い線です。キャンバス上で角をクリックして囲います(最初の点をクリック・ダブルクリック・Enterで確定)。面積計算には入りません。色・線種・表示する図面(平面図/求積図/照明・音響設備図)はあとから「選択中の要素」で変えられます。</p>
         <!-- 旧「区画を追加」の入力欄(仕組み残置のため非表示)。過去の案件の区画は今まで通り表示・編集できる -->
         <div style="display:none">
           <select id="regionType"></select>
@@ -352,13 +352,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.83.2"></script>
-  <script src="js/geometry.js?v=1.83.2"></script>
-  <script src="js/render.js?v=1.83.2"></script>
-  <script src="js/interactions.js?v=1.83.2"></script>
-  <script src="js/print.js?v=1.83.2"></script>
-  <script src="js/forms.js?v=1.83.2"></script>
-  <script src="js/main.js?v=1.83.2"></script>
+  <script src="js/model.js?v=1.83.3"></script>
+  <script src="js/geometry.js?v=1.83.3"></script>
+  <script src="js/render.js?v=1.83.3"></script>
+  <script src="js/interactions.js?v=1.83.3"></script>
+  <script src="js/print.js?v=1.83.3"></script>
+  <script src="js/forms.js?v=1.83.3"></script>
+  <script src="js/main.js?v=1.83.3"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

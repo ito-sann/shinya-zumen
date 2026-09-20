@@ -502,7 +502,8 @@
         draw();
         return;
       }
-      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
+      if (!['plan', 'kyuseki', 'lighting'].includes(R.getLayer())) { R.setLayer('plan'); buildLayerTabs(); }
+      const boundaryLayers = R.getLayer() === 'lighting' ? ['lighting'] : ['plan', 'kyuseki'];
       state.draftKind = 'region';
       I.beginPolygon(state, (pts) => {
         const r = M.addPolygonRegion(project, 'other', pts);
@@ -512,7 +513,7 @@
         if (lc) r.boundaryColor = lc;
         const ls = $('regionLineStyle') ? $('regionLineStyle').value : 'solid';
         if (ls && ls !== 'solid') r.boundaryLineStyle = ls;
-        r.layers = ['plan', 'kyuseki'];
+        r.layers = boundaryLayers;
         state.selectedId = r.id;
         refresh(); showProps(r);
       });
@@ -1480,11 +1481,11 @@
         <input type="color" id="propBoundaryColor" value="${el.boundaryColor || '#333333'}">
         <button type="button" id="propBoundaryColorReset" class="btn small">標準に戻す</button>
       </span></div>`;
-      // 囲い線(面積の扱い=表示のみ)は、平面図・求積図のどちらに出すか選べる
+      // 囲い線(面積の扱い=表示のみ)は、平面図・求積図・照明音響設備図から表示先を選べる
       if (G.areaUseForRegion(el) === 'display') {
         const regLayers = Array.isArray(el.layers) && el.layers.length ? el.layers : ['plan', 'kyuseki'];
         html += '<div class="prop-row"><span>表示する図面</span><div class="check-stack">';
-        [['plan', '平面図'], ['kyuseki', '求積図']].forEach(([layer, label]) => {
+        [['plan', '平面図'], ['kyuseki', '求積図'], ['lighting', '照明・音響設備図']].forEach(([layer, label]) => {
           html += `<label class="check-row"><input type="checkbox" data-region-layer="${layer}" ${regLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
         });
         html += '</div></div>';

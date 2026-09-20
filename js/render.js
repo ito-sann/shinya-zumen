@@ -2173,7 +2173,7 @@
         muted: !isMain(el),
         selected: state.selectedId === el.id,
         stroke: null,
-        neutralStroke: currentLayer === 'lighting' ? '#333' : null,
+        neutralStroke: currentLayer === 'lighting' && global.Geometry.areaUseForRegion(el) !== 'display' ? '#333' : null,
         code,
       });
       const showRegionDims = el.showDims !== false;
