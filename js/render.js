@@ -1512,12 +1512,11 @@
     ctx.restore();
   }
 
-  /* ---- 営業所外周(壁)の描画 ---- */
+  /* ---- 壁芯付き外周(営業所・トイレ等)の描画 ---- */
 
   /* 平面系のレイヤーに壁を二重線で描く。壁厚ぶんの帯を塗り、内外の輪郭線を引く。
    * 選択中は赤くし、入力した頂点(ドラッグで編集できる点)にハンドルを出す。 */
-  function drawPremiseWalls(ctx, project, opts) {
-    const pr = project.premise;
+  function drawPremiseWalls(ctx, pr, opts) {
     if (!pr || (pr.points || []).length < 3) return;
     const wp = global.Geometry.premiseWallPolysAbs(pr);
     const inner = wp.inner.map((p) => worldToScreen(p.x, p.y));
@@ -1622,8 +1621,7 @@
 
   /* 求積図: 壁芯線(実線)と辺長・頂点番号を描く。
    * 頂点番号(P1, P2 …)は壁芯の座標求積表と対応する。 */
-  function drawPremiseCenterline(ctx, project) {
-    const pr = project.premise;
+  function drawPremiseCenterline(ctx, pr) {
     if (!pr || (pr.points || []).length < 3) return;
     const rl = global.Geometry.premiseRegionLike(pr);
     const pts = rl.points.map((p) => worldToScreen(rl.x + p.x, rl.y + p.y));
@@ -2135,11 +2133,12 @@
       drawUnderlay(ctx, project);
     }
 
-    // 営業所外周(壁)。平面図・求積図でははっきり、その他では薄く描く
-    if (project.premise) {
-      drawPremiseWalls(ctx, project, {
+    // 壁芯付き外周(営業所・トイレ等)。平面図・求積図でははっきり、その他では薄く描く
+    const premiseOutlines = global.Model.premiseOutlines(project);
+    for (const outline of premiseOutlines) {
+      drawPremiseWalls(ctx, outline, {
         muted: currentLayer !== 'plan' && currentLayer !== 'kyuseki',
-        selected: state.selectedId === 'premise',
+        selected: currentSelectedId === outline.id,
       });
     }
 
@@ -2224,10 +2223,10 @@
       }
     }
     if (vis.fixtures) drawFixtureLegend(ctx, canvas, project);
-    // 壁芯線(営業所求積の根拠になる線)を最前面側に描く。
+    // 各外周の壁芯線を最前面側に描く。
     // 求積図だけでなく平面図にも同じ線を表示する。
-    if ((currentLayer === 'kyuseki' || currentLayer === 'plan') && project.premise) {
-      drawPremiseCenterline(ctx, project);
+    if (currentLayer === 'kyuseki' || currentLayer === 'plan') {
+      for (const outline of premiseOutlines) drawPremiseCenterline(ctx, outline);
     }
     // 自動計算の求積表(計算過程)の重ね表示は廃止した。
     // 求積は「求積表」タブの手入力の表(drawManualKyusekiSheet)に移行。

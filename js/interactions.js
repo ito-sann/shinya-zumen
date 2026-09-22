@@ -121,7 +121,7 @@
     return inTopArm || inSideArm;
   }
 
-  /* 点と線分の距離(mm)。営業所外周は「線の近く」だけつかめるようにする。 */
+  /* 点と線分の距離(mm)。壁芯付き外周は「線の近く」だけつかめるようにする。 */
   function distToSegment(wx, wy, ax, ay, bx, by) {
     const dx = bx - ax, dy = by - ay;
     const len2 = dx * dx + dy * dy;
@@ -129,10 +129,9 @@
     return Math.hypot(wx - (ax + dx * t), wy - (ay + dy * t));
   }
 
-  /* 営業所外周の輪郭線の近く(壁厚 or 12px相当のどちらか大きい方)なら true。
+  /* 壁芯付き外周の輪郭線の近く(壁厚 or 12px相当のどちらか大きい方)なら true。
    * 内側全体を当たりにすると、店内の空きクリック(パン)を奪ってしまうため線だけにする。 */
-  function nearPremiseEdge(project, wx, wy) {
-    const pr = project.premise;
+  function nearPremiseEdge(pr, wx, wy) {
     if (!pr || (pr.points || []).length < 3) return false;
     const tol = Math.max(pr.wallThickness || 100, 12 / global.Render.view.zoom);
     const pts = pr.points;
@@ -208,7 +207,7 @@
           && el.layers.indexOf(layer) < 0) return false;
       return vis.allRegions || (vis.regionTypes && vis.regionTypes.indexOf(el.type) >= 0);
     }
-    if (kind === 'walls') return layer !== 'furnviews' && layer !== 'kyusekihyo';
+    if (kind === 'walls' || kind === 'premise') return layer !== 'furnviews' && layer !== 'kyusekihyo';
     if (kind === 'lines') return global.Render.lineVisibleOnLayer(el, layer);
     if (kind === 'fittings') return global.Render.fittingVisibleOnLayer(el, layer);
     if (kind === 'furniture') return !!vis.furniture || (!!vis.counterFurniture && isCounterFurniture(el));
@@ -264,10 +263,14 @@
     filter = filter || 'all';
     const hit = hitOrderable(project, wx, wy, filter);
     if (hit) return hit;
-    // 営業所外周は一番下(輪郭線の近くだけ)。図面を描かないページでは選ばない
-    const layer = global.Render.getLayer();
-    if (layer !== 'furnviews' && layer !== 'kyusekihyo' &&
-        matchesSelectionFilter(project.premise, 'premise', filter) && nearPremiseEdge(project, wx, wy)) return project.premise;
+    // 壁芯付き外周は一番下(輪郭線の近くだけ)。後から描いた外周から選ぶ。
+    const outlines = global.Model.premiseOutlines(project);
+    for (let i = outlines.length - 1; i >= 0; i--) {
+      const outline = outlines[i];
+      if (!matchesSelectionFilter(outline, 'premise', filter) ||
+          !visibleForHit(project, 'premise', outline)) continue;
+      if (nearPremiseEdge(outline, wx, wy)) return outline;
+    }
     return null;
   }
 

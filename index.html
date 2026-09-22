@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.83.3">
+  <link rel="stylesheet" href="css/style.css?v=1.84.0">
 </head>
 <body>
   <header class="topbar">
@@ -84,9 +84,10 @@
       </section>
 
       <section class="group" data-layers="plan kyuseki">
-        <h3>営業所外周(壁芯)</h3>
-        <button id="btnDrawPremise" class="btn block">外周を多角形で描く</button>
-        <button id="btnPremAuto" class="btn block">区画に合わせて自動作成</button>
+        <h3>営業所・各室の外周(壁芯)</h3>
+        <button id="btnDrawPremise" class="btn block">外周を追加して描く</button>
+        <button id="btnPremAuto" class="btn block">区画に合わせて外周を追加</button>
+        <p class="muted">新しく追加する外周の設定です。描いた外周の壁厚・測り方・名前は、選択後に右側で変更できます。</p>
         <div class="size-row">
           <label>壁厚 <input type="number" id="premWall" value="100" step="10" min="10"> mm</label>
           <label>測り方
@@ -107,8 +108,8 @@
         <div class="size-row">
           <label>壁から <input type="number" id="premiseBoundaryGap" value="10" step="10" min="0"> mm内側</label>
         </div>
-        <button id="btnPremiseBoundary" class="btn block">内側に囲い線を自動作成</button>
-        <p class="muted">「内側の寸法」で描くと、壁厚の半分だけ外側に壁芯線を自動で引きます(壁芯線は平面図・求積図に表示)。「内側に囲い線を自動作成」は、壁の内面から指定した距離(実寸)だけ内側に、営業所全体を示す青い囲い線(面積に入れない線)を作ります。</p>
+        <button id="btnPremiseBoundary" class="btn block">選択した外周の内側に囲い線を作成</button>
+        <p class="muted">営業所全体に加え、トイレなどの外周を何個でも描けます。「内側の寸法」では壁厚の半分だけ外側に壁芯線を引きます(平面図・求積図に表示)。最初の外周を営業所全体として扱い、追加した外周は営業所面積に加算しません。内側の囲い線は、選択した外周の壁の内面から指定した距離だけ離して作ります。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -276,7 +277,7 @@
           <option value="fittings">建具・壁だけ</option>
           <option value="fixtures">照明・音響だけ</option>
           <option value="notes">メモ・コメントだけ</option>
-          <option value="premise">営業所外周だけ</option>
+          <option value="premise">外周(壁芯)だけ</option>
         </select>
         <p class="muted">重なって選びにくいときに、クリックで選べる種類を絞れます。</p>
       </section>
@@ -352,13 +353,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.83.3"></script>
-  <script src="js/geometry.js?v=1.83.3"></script>
-  <script src="js/render.js?v=1.83.3"></script>
-  <script src="js/interactions.js?v=1.83.3"></script>
-  <script src="js/print.js?v=1.83.3"></script>
-  <script src="js/forms.js?v=1.83.3"></script>
-  <script src="js/main.js?v=1.83.3"></script>
+  <script src="js/model.js?v=1.84.0"></script>
+  <script src="js/geometry.js?v=1.84.0"></script>
+  <script src="js/render.js?v=1.84.0"></script>
+  <script src="js/interactions.js?v=1.84.0"></script>
+  <script src="js/print.js?v=1.84.0"></script>
+  <script src="js/forms.js?v=1.84.0"></script>
+  <script src="js/main.js?v=1.84.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

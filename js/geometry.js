@@ -514,8 +514,8 @@
     const minX = Math.min(...c.map((p) => p.x));
     const minY = Math.min(...c.map((p) => p.y));
     return {
-      id: 'premise-centerline',
-      label: '営業所(壁芯)',
+      id: `${premise.id || 'premise'}-centerline`,
+      label: !premise.id || premise.id === 'premise' ? '営業所(壁芯)' : `${premise.label || '外周'}(壁芯)`,
       shape: 'polygon',
       x: minX,
       y: minY,
@@ -742,9 +742,9 @@
     for (const r of project.regions) {
       consider(r.x, r.y); consider(r.x + r.w, r.y + r.h);
     }
-    if (project.premise && (project.premise.points || []).length >= 3) {
-      const t = project.premise.wallThickness || 0;
-      const p = project.premise;
+    for (const p of global.Model.premiseOutlines(project)) {
+      if ((p.points || []).length < 3) continue;
+      const t = p.wallThickness || 0;
       consider(p.x - t, p.y - t); consider(p.x + p.w + t, p.y + p.h + t);
     }
     for (const w of (project.walls || [])) {

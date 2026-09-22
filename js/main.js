@@ -528,14 +528,13 @@
         draw();
         return;
       }
-      if (project.premise && !confirm('営業所外周はすでにあります。描き直しますか?')) return;
       if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') {
         R.setLayer('plan');
         buildLayerTabs();
       }
       state.draftKind = 'premise';
       I.beginPolygon(state, (pts) => {
-        const pr = M.setPremise(project, pts,
+        const pr = M.addPremise(project, pts,
           parseInt($('premWall').value, 10) || 100, $('premMeasured').value);
         state.selectedId = pr.id;
         refresh(); showProps(pr);
@@ -548,51 +547,39 @@
         alert('区画がありません。先に客室・厨房などの区画を置いてください。');
         return;
       }
-      if (project.premise && !confirm('営業所外周はすでにあります。作り直しますか?')) return;
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       for (const r of project.regions) {
         minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
         maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
       }
-      const pr = M.setPremise(project,
+      const pr = M.addPremise(project,
         [{ x: minX, y: minY }, { x: maxX, y: minY }, { x: maxX, y: maxY }, { x: minX, y: maxY }],
         parseInt($('premWall').value, 10) || 100, $('premMeasured').value);
       state.selectedId = pr.id;
       R.fitToView(project, canvasCss());
       refresh(); showProps(pr);
     };
-    // 外周の壁の内面から指定距離だけ内側に、営業所全体を示す青い囲い線を自動で作る。
+    // 選択した外周の壁の内面から指定距離だけ内側に、青い囲い線を自動で作る。
     // できあがった線は普通の囲い線(表示のみ)なので、あとから頂点・色・線種を自由に変えられる。
     $('btnPremiseBoundary').onclick = () => {
-      const pr = project.premise;
+      const found = M.findById(project, state.selectedId);
+      const pr = found && found.kind === 'premise' ? found.element : null;
       if (!pr || (pr.points || []).length < 3) {
-        alert('先に「外周を多角形で描く」で営業所外周を作ってください。');
+        alert('囲い線を作る外周を、図面または右側の要素一覧から選択してください。');
         return;
       }
       const gap = Math.max(0, parseFloat($('premiseBoundaryGap').value) || 0);
       const inner = G.premiseWallPolysAbs(pr).inner;
       const pts = G.offsetPolygonAbs(inner, -gap);
       const r = M.addPolygonRegion(project, 'other', pts);
-      r.label = '営業所囲い線';
+      r.label = (pr.label || '外周') + 'の囲い線';
       r.areaUse = 'display';       // 面積計算には入れない(表示のみ)
       r.boundaryColor = '#1d4ed8'; // 青
       r.layers = ['plan', 'kyuseki'];
       state.selectedId = r.id;
       refresh(); showProps(r);
     };
-    // 壁厚・測り方の変更は、作成済みの外周にも即時反映する
-    $('premWall').onchange = (e) => {
-      if (project.premise) {
-        project.premise.wallThickness = Math.max(10, parseInt(e.target.value, 10) || 100);
-        refresh();
-      }
-    };
-    $('premMeasured').onchange = (e) => {
-      if (project.premise) {
-        project.premise.measuredAt = e.target.value;
-        refresh();
-      }
-    };
+    // 左の壁厚・測り方は新規作図用。既存の外周は右の個別設定で変更する。
     // 内壁(部屋を仕切る壁)の作図。区画の多角形と同じ操作だが、閉じなくてよい(2点から確定可)。
     // 作図中にもう一度押すと: 2点以上なら確定、未満なら中止。
     $('btnDrawWall').onclick = () => {
@@ -799,7 +786,7 @@
     const btnP = $('btnDrawPremise');
     const btnF = $('btnDrawFurnPoly');
     btnR.textContent = '多角形で描く';
-    btnP.textContent = '外周を多角形で描く';
+    btnP.textContent = '外周を追加して描く';
     btnF.textContent = '自由な形で描く(真上から)';
     btnR.classList.remove('danger');
     btnP.classList.remove('danger');
@@ -926,8 +913,8 @@
     $('metaNorth').checked = m.showNorthMark === true;
     $('metaFontScale').value = String(m.fontScale || 100);
     $('premMethod').value = m.premisesMethod || 'regions';
-    $('premWall').value = project.premise ? project.premise.wallThickness : 100;
-    $('premMeasured').value = project.premise ? project.premise.measuredAt : 'inner';
+    $('premWall').value = 100;
+    $('premMeasured').value = 'inner';
     $('deductPillars').checked = m.deductPillars === true;
     $('printTrueScale').checked = m.printTrueScale === true;
     $('metaKyusekiTable').checked = m.showKyusekiTable !== false;
@@ -1021,8 +1008,9 @@
   function elementListRows() {
     const rows = [];
     const push = (group, kind, el, label, sub) => rows.push({ group, kind, el, label, sub });
-    if (project.premise) {
-      push('外周', 'premise', project.premise, '営業所外周', project.premise.measuredAt === 'center' ? '壁芯寸法' : '内法寸法');
+    for (const pr of M.premiseOutlines(project)) {
+      push('外周', 'premise', pr, pr.label || '外周',
+        `${pr.measuredAt === 'center' ? '壁芯寸法' : '内法寸法'}・壁厚${pr.wallThickness}mm${pr === project.premise ? '・営業所全体' : ''}`);
     }
     (project.dimensions || []).forEach((d, i) => {
       push('寸法線', 'dimensions', d, `寸法線 ${i + 1}`, dimLengthLabel(d));
@@ -1661,16 +1649,18 @@
       html += '<p class="muted">同じ種類でも枝番を入れると設備一覧表で別行に分かれます(例: A/B/C、吊高違いなど)。空欄なら今まで通り1つにまとまります。</p>';
     }
     if (kind === 'premise') {
-      // 壁厚・測り方は左の「営業所外周(壁芯)」欄から変更する(入力欄を1か所にまとめる)
       const c = G.premiseCalc(el);
-      html += `<div class="prop-row"><span>壁厚</span><b>${el.wallThickness} mm</b></div>`;
-      html += `<div class="prop-row"><span>測り方</span><b>${el.measuredAt === 'center' ? '壁芯の寸法' : '内側の寸法(内法)'}</b></div>`;
+      html += `<label class="prop-row"><span>壁厚(mm)</span><input type="number" id="propPremiseWall" min="10" step="10" value="${el.wallThickness}"></label>`;
+      html += `<label class="prop-row"><span>測り方</span><select id="propPremiseMeasured">
+        <option value="inner"${el.measuredAt === 'center' ? '' : ' selected'}>内側の寸法(内法)</option>
+        <option value="center"${el.measuredAt === 'center' ? ' selected' : ''}>壁芯の寸法</option>
+      </select></label>`;
       html += `<div class="prop-row"><span>面積(壁芯)</span><b>${c.total.toFixed(2)} ㎡</b></div>`;
       html += `<div class="prop-row"><span>壁芯線の色</span><span class="font-ctrl">
         <input type="color" id="propPremiseColor" value="${el.lineColor || '#111111'}">
         <button type="button" id="propPremiseColorReset" class="btn small">標準に戻す</button>
       </span></div>`;
-      html += '<p class="muted">壁厚・測り方は左の「営業所外周(壁芯)」欄で変更できます。頂点はキャンバス上でドラッグでも動かせます。</p>';
+      html += `<p class="muted">${el === project.premise ? '営業所全体の外周です。' : '追加の外周です。営業所面積には加算しません。'}頂点はキャンバス上でドラッグでも動かせます。</p>`;
       el.points.forEach((p, i) => {
         html += `<div class="prop-row vertex-row"><span>P${i + 1}</span>
           <input type="number" step="10" data-vx="${i}" value="${el.x + p.x}" title="X(mm)">
@@ -1744,8 +1734,9 @@
       });
     }
     if (kind === 'premise') {
-      // 営業所外周は1つだけなので複製はなし
-      html += `<button class="btn small danger" id="btnDel">この要素を削除</button>`;
+      html += `<div class="add-row">
+        <button class="btn small" id="btnDup" title="複製 (Cmd/Ctrl+D)">複製</button>
+        <button class="btn small danger" id="btnDel">この要素を削除</button></div>`;
     } else {
       html += `<div class="prop-row z-order-row"><span>重なり順</span>
         <div class="z-order-controls">
@@ -1898,6 +1889,17 @@
       };
     }
     // 営業所外周: 壁芯線の色
+    const premiseWall = box.querySelector('#propPremiseWall');
+    if (premiseWall) premiseWall.onchange = () => {
+      const value = Number(premiseWall.value);
+      if (Number.isFinite(value) && value >= 10) el.wallThickness = value;
+      refresh(); showProps(el);
+    };
+    const premiseMeasured = box.querySelector('#propPremiseMeasured');
+    if (premiseMeasured) premiseMeasured.onchange = () => {
+      el.measuredAt = premiseMeasured.value;
+      refresh(); showProps(el);
+    };
     const premiseColor = box.querySelector('#propPremiseColor');
     if (premiseColor) {
       premiseColor.oninput = (e) => {
@@ -2138,7 +2140,7 @@
 
   function kindLabel(el, kind) {
     if (kind === 'regions') return (M.REGION_TYPES[el.type] || {}).label || '区画';
-    if (kind === 'premise') return '営業所外周(壁芯)';
+    if (kind === 'premise') return '外周(壁芯)';
     if (kind === 'walls') return '内壁';
     if (kind === 'lines') return '線';
     if (kind === 'furniture') return '備品';

@@ -413,10 +413,12 @@
       /* 下絵(間取り図などの画像をなぞる用)。未設定なら null。
        *   src=画像(dataURL), x,y=左上(mm), w,h=実寸(mm), opacity=不透明度(0〜1) */
       underlay: null,
-      /* 営業所外周(壁芯求積用)。多角形1つ + 壁厚。未作成なら null。
+      /* 営業所外周(壁芯求積用)。主外周 + 壁厚。未作成なら null。
        *   measuredAt: 'inner'=内側の寸法で入力(壁芯線は壁厚/2だけ外側に自動生成)
        *               'center'=壁芯の寸法で入力(そのまま壁芯線になる) */
       premise: null,
+      /* トイレなどの追加外周。壁芯・壁厚を描くが、営業所面積には加算しない。 */
+      additionalPremises: [],
       regions: [],
       walls: [],
       /* 自由な線(折れ線)。囲わなくてよい、見た目だけの線。面積計算には使わない。
@@ -564,14 +566,34 @@
     return line;
   }
 
-  /* 営業所外周を作成する。pointsAbs は絶対座標(mm)の頂点列(3点以上)。
+  /* 主外周と追加外周を描画順に返す。旧保存データもそのまま扱える。 */
+  function premiseOutlines(project) {
+    return (project.premise ? [project.premise] : []).concat(project.additionalPremises || []);
+  }
+
+  function nextPremiseId(project) {
+    let id;
+    do { id = nextId(project, 'premise'); } while (findById(project, id));
+    return id;
+  }
+
+  function nextPremiseLabel(project) {
+    let number = (project.additionalPremises || []).length + 1;
+    for (const outline of premiseOutlines(project)) {
+      const match = /^外周(\d+)$/.exec(outline.label || '');
+      if (match) number = Math.max(number, Number(match[1]));
+    }
+    return `外周${number + 1}`;
+  }
+
+  /* 外周を作成する。pointsAbs は絶対座標(mm)の頂点列(3点以上)。
    * 多角形区画と同じく「左上原点 + 相対頂点」で持ち、頂点ドラッグも共通で使える。 */
-  function setPremise(project, pointsAbs, wallThickness, measuredAt) {
+  function createPremise(id, label, pointsAbs, wallThickness, measuredAt) {
     const minX = Math.min(...pointsAbs.map((p) => p.x));
     const minY = Math.min(...pointsAbs.map((p) => p.y));
-    project.premise = {
-      id: 'premise',
-      label: '営業所外周',
+    const outline = {
+      id,
+      label,
       shape: 'polygon',
       x: minX,
       y: minY,
@@ -581,8 +603,24 @@
       wallThickness: Math.max(10, wallThickness | 0) || 100,
       measuredAt: measuredAt === 'center' ? 'center' : 'inner',
     };
-    normalizePolygon(project.premise);
+    normalizePolygon(outline);
+    return outline;
+  }
+
+  /* 既存の呼び出し元向け: 主外周だけを置き換え、追加外周は残す。 */
+  function setPremise(project, pointsAbs, wallThickness, measuredAt) {
+    project.premise = createPremise('premise', '営業所外周', pointsAbs, wallThickness, measuredAt);
     return project.premise;
+  }
+
+  /* 最初は主外周を作り、2つ目以降は独立した追加外周として残す。 */
+  function addPremise(project, pointsAbs, wallThickness, measuredAt) {
+    if (!project.premise) return setPremise(project, pointsAbs, wallThickness, measuredAt);
+    const outline = createPremise(nextPremiseId(project), nextPremiseLabel(project),
+      pointsAbs, wallThickness, measuredAt);
+    project.additionalPremises = project.additionalPremises || [];
+    project.additionalPremises.push(outline);
+    return outline;
   }
 
   function addFurniture(project, kind, variant) {
@@ -709,7 +747,7 @@
       project.premise = null;
       return true;
     }
-    for (const key of ['regions', 'walls', 'lines', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
+    for (const key of ['additionalPremises', 'regions', 'walls', 'lines', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
       const i = (project[key] || []).findIndex((e) => e.id === id);
       if (i >= 0) { project[key].splice(i, 1); return true; }
     }
@@ -729,9 +767,8 @@
   const Z_KIND_ORDER = ['regions', 'walls', 'fittings', 'furniture', 'fixtures', 'dimensions', 'lines', 'notes'];
 
   function findById(project, id) {
-    if (project.premise && project.premise.id === id) {
-      return { element: project.premise, kind: 'premise' };
-    }
+    const outline = premiseOutlines(project).find((p) => p.id === id);
+    if (outline) return { element: outline, kind: 'premise' };
     for (const key of ['regions', 'walls', 'lines', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions']) {
       const e = (project[key] || []).find((e) => e.id === id);
       if (e) return { element: e, kind: key };
@@ -791,14 +828,14 @@
     return true;
   }
 
-  /* 選択中の要素を複製する(営業所外周は1つだけなので対象外)。
+  /* 選択中の要素を複製する。外周の複製は営業所面積に加算しない追加外周になる。
    * 少し右下にずらして置き、新しい id を振る。区画は通し番号も振り直す。 */
   function duplicateElement(project, id) {
     const found = findById(project, id);
-    if (!found || found.kind === 'premise') return null;
+    if (!found) return null;
     const prefix = { regions: 'r', walls: 'w', lines: 'l', furniture: 'f', fittings: 'g', fixtures: 'x', notes: 'n', dimensions: 'd' }[found.kind];
     const copy = JSON.parse(JSON.stringify(found.element));
-    copy.id = nextId(project, prefix);
+    copy.id = found.kind === 'premise' ? nextPremiseId(project) : nextId(project, prefix);
     const d = 300; // 元の要素と完全に重ならないようにずらす量(mm)
     if (found.kind === 'dimensions') {
       copy.x1 += d; copy.y1 += d; copy.x2 += d; copy.y2 += d;
@@ -807,6 +844,14 @@
     }
     copy.x += d;
     copy.y += d;
+    if (found.kind === 'premise') {
+      if (copy.label === '営業所外周' || /^外周\d+$/.test(copy.label)) {
+        copy.label = nextPremiseLabel(project);
+      }
+      project.additionalPremises = project.additionalPremises || [];
+      project.additionalPremises.push(copy);
+      return copy;
+    }
     if (found.kind === 'notes') { copy.tx += d; copy.ty += d; }
     if (found.kind === 'regions') {
       copy.number = nextRegionNumber(project, copy.type);
@@ -903,6 +948,7 @@
     project.fittings = obj.fittings || [];
     project.fixtures = obj.fixtures || [];
     project.premise = obj.premise || null;
+    project.additionalPremises = Array.isArray(obj.additionalPremises) ? obj.additionalPremises : [];
     project.underlay = obj.underlay || null;
     project.notes = obj.notes || [];
     project.dimensions = obj.dimensions || [];
@@ -992,7 +1038,7 @@
     FURNITURE_STYLES, defaultStyle, furniturePreset,
     SIGHTLINE_LIMIT, CHECKLIST_ITEMS,
     todayStr, defaultProject, nextId, nextRegionNumber,
-    addRegion, addPolygonRegion, normalizePolygon, setPremise, addPolygonWall, addPolyline,
+    addRegion, addPolygonRegion, normalizePolygon, premiseOutlines, setPremise, addPremise, addPolygonWall, addPolyline,
     addFurniture, addPolygonFurniture, addFitting, addFixture, addNote, addDimension,
     removeById, findById, elementZ, sortedOrderableItems, zOrderPosition, setZOrder, duplicateElement,
     serialize, deserialize,
