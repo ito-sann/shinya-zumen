@@ -1355,7 +1355,7 @@
 
   /* 求積表(手入力)ページ: 手で入力した行(名称・計算式・グループ)から
    * 表を組み立てて用紙に描く。表はドラッグで移動・右下ハンドルで拡縮できる。 */
-  function drawManualKyusekiSheet(ctx, canvas, project) {
+  function drawManualKyusekiSheet(ctx, canvas, project, opts) {
     const d = global.Geometry.manualKyusekiData(project);
     const fmt = (v, digits) => (v == null ? '—' : v.toFixed(digits));
     const cols = ['符号', '部分の名称', '計算式', '面積(㎡)'];
@@ -1374,6 +1374,8 @@
       });
     }
     if (!tables.length) {
+      // 行がなくてもコメントだけを配置できる。操作案内はコメントやPDFに重ねない。
+      if ((opts && opts.print) || (project.notes || []).some((n) => noteVisibleOnLayer(n, 'kyusekihyo'))) return;
       ctx.save();
       ctx.fillStyle = '#64748b';
       ctx.font = `${Math.max(12, wpx(280))}px sans-serif`;
@@ -1382,6 +1384,7 @@
       const f = paperFrameWorld(project);
       const p = worldToScreen(f.x + f.w / 2, f.y + f.h / 2);
       ctx.fillText('右の「求積表」欄で行を追加すると、ここに計算表が表示されます', p.x, p.y);
+      ctx.fillText('コメントは左の「メモを追加」から、行を追加せずに書けます', p.x, p.y + Math.max(24, wpx(500)));
       ctx.restore();
       return;
     }
@@ -2111,9 +2114,10 @@
       drawPaperFrame(ctx, project);
     }
 
-    // 求積表(手入力)は図面を描かず、計算表だけを用紙に置いて終わる
+    // 求積表(手入力)は計算表とコメントを描く。表に行がなくてもコメントを表示する。
     if (currentLayer === 'kyusekihyo') {
-      drawManualKyusekiSheet(ctx, canvas, project);
+      drawManualKyusekiSheet(ctx, canvas, project, opts);
+      drawNotes(ctx, project, state);
       return;
     }
 
