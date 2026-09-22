@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.84.0">
+  <link rel="stylesheet" href="css/style.css?v=1.85.0">
 </head>
 <body>
   <header class="topbar">
@@ -85,6 +85,8 @@
 
       <section class="group" data-layers="plan kyuseki">
         <h3>営業所・各室の外周(壁芯)</h3>
+        <label class="check-row"><input type="checkbox" id="premCenterlines"> 壁芯線を表示</label>
+        <p class="muted">初期状態は非表示です。オンにすると、すべての外周の壁芯線を平面図・求積図とそのPDFに表示します。</p>
         <button id="btnDrawPremise" class="btn block">外周を追加して描く</button>
         <button id="btnPremAuto" class="btn block">区画に合わせて外周を追加</button>
         <p class="muted">新しく追加する外周の設定です。描いた外周の壁厚・測り方・名前は、選択後に右側で変更できます。</p>
@@ -109,7 +111,7 @@
           <label>壁から <input type="number" id="premiseBoundaryGap" value="10" step="10" min="0"> mm内側</label>
         </div>
         <button id="btnPremiseBoundary" class="btn block">選択した外周の内側に囲い線を作成</button>
-        <p class="muted">営業所全体に加え、トイレなどの外周を何個でも描けます。「内側の寸法」では壁厚の半分だけ外側に壁芯線を引きます(平面図・求積図に表示)。最初の外周を営業所全体として扱い、追加した外周は営業所面積に加算しません。内側の囲い線は、選択した外周の壁の内面から指定した距離だけ離して作ります。</p>
+        <p class="muted">営業所全体に加え、トイレなどの外周を何個でも描けます。「内側の寸法」では壁厚の半分だけ外側が壁芯の位置になります。最初の外周を営業所全体として扱い、追加した外周は営業所面積に加算しません。内側の囲い線は、選択した外周の壁の内面から指定した距離だけ離して作ります。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -353,13 +355,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.84.0"></script>
-  <script src="js/geometry.js?v=1.84.0"></script>
-  <script src="js/render.js?v=1.84.0"></script>
-  <script src="js/interactions.js?v=1.84.0"></script>
-  <script src="js/print.js?v=1.84.0"></script>
-  <script src="js/forms.js?v=1.84.0"></script>
-  <script src="js/main.js?v=1.84.0"></script>
+  <script src="js/model.js?v=1.85.0"></script>
+  <script src="js/geometry.js?v=1.85.0"></script>
+  <script src="js/render.js?v=1.85.0"></script>
+  <script src="js/interactions.js?v=1.85.0"></script>
+  <script src="js/print.js?v=1.85.0"></script>
+  <script src="js/forms.js?v=1.85.0"></script>
+  <script src="js/main.js?v=1.85.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

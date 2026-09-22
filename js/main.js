@@ -911,6 +911,7 @@
     $('fixNote').value = m.lightingNote || '';
     $('metaFrame').checked = m.showPaperFrame !== false;
     $('metaNorth').checked = m.showNorthMark === true;
+    $('premCenterlines').checked = m.showPremiseCenterlines === true;
     $('metaFontScale').value = String(m.fontScale || 100);
     $('premMethod').value = m.premisesMethod || 'regions';
     $('premWall').value = 100;
@@ -929,6 +930,7 @@
     $('metaOrient').onchange= (e) => { m.orientation = e.target.value; draw(); };
     $('metaFrame').onchange = (e) => { m.showPaperFrame = e.target.checked; draw(); };
     $('metaNorth').onchange = (e) => { m.showNorthMark = e.target.checked; draw(); };
+    $('premCenterlines').onchange = (e) => { m.showPremiseCenterlines = e.target.checked; draw(); };
     $('metaFontScale').onchange = (e) => { m.fontScale = parseInt(e.target.value, 10); draw(); };
     // 営業所求積の方式(署のローカルルール)。求積表とサマリーに反映する
     $('premMethod').onchange = (e) => { m.premisesMethod = e.target.value; refresh(); };

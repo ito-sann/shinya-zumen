@@ -369,6 +369,7 @@
         showPaperFrame: true, // 用紙枠ガイド(用紙サイズ×縮尺の範囲)を表示するか
         northAngle: 0,        // 方位記号の角度(度)。0 = 真上が北
         showNorthMark: false, // 方位記号(N)を表示するか。既定は非表示
+        showPremiseCenterlines: false, // 営業所・各室の外周の壁芯線を表示するか。既定は非表示
         /* 求積図(営業所/客室・調理場)の図面そのものに、求積表(計算過程)を
          * 白枠で重ねて印字するか。右サイドバーのボタンで切り替える。 */
         showKyusekiTable: true,
@@ -931,6 +932,8 @@
     const base = defaultProject();
     const project = Object.assign(base, obj);
     project.meta = Object.assign(base.meta, obj.meta || {});
+    // 表示設定のない旧データも、壁芯線は非表示で読み込む。
+    project.meta.showPremiseCenterlines = project.meta.showPremiseCenterlines === true;
     project.regions = (obj.regions || [])
       .filter((r) => r && r.boundaryOnly !== true && r.boundaryArea !== true)
       .map((r) => {

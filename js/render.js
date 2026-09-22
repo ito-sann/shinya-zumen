@@ -1619,8 +1619,7 @@
     ctx.restore();
   }
 
-  /* 求積図: 壁芯線(実線)と辺長・頂点番号を描く。
-   * 頂点番号(P1, P2 …)は壁芯の座標求積表と対応する。 */
+  /* 平面図・求積図: 表示オプションがオンのとき、壁芯線(実線)を描く。 */
   function drawPremiseCenterline(ctx, pr) {
     if (!pr || (pr.points || []).length < 3) return;
     const rl = global.Geometry.premiseRegionLike(pr);
@@ -2223,9 +2222,10 @@
       }
     }
     if (vis.fixtures) drawFixtureLegend(ctx, canvas, project);
-    // 各外周の壁芯線を最前面側に描く。
-    // 求積図だけでなく平面図にも同じ線を表示する。
-    if (currentLayer === 'kyuseki' || currentLayer === 'plan') {
+    // 表示オプションがオンのときだけ、各外周の壁芯線を最前面側に描く。
+    // 壁の二重線や面積計算は、壁芯線の表示・非表示にかかわらず維持する。
+    if (project.meta.showPremiseCenterlines === true &&
+        (currentLayer === 'kyuseki' || currentLayer === 'plan')) {
       for (const outline of premiseOutlines) drawPremiseCenterline(ctx, outline);
     }
     // 自動計算の求積表(計算過程)の重ね表示は廃止した。

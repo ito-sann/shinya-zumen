@@ -5,10 +5,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const context = vm.createContext({ window: {} });
-for (const name of ['model', 'geometry']) {
+for (const name of ['model', 'geometry', 'render']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', name + '.js'), 'utf8'), context);
 }
-const { Model: M, Geometry: G } = context.window;
+const { Model: M, Geometry: G, Render: R } = context.window;
 const plain = (value) => JSON.parse(JSON.stringify(value));
 const rectangle = (x, y, w, h) => [
   { x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h },
@@ -145,3 +145,111 @@ test('toilet wall outlines do not inflate the main centerline area or region tot
   assert.equal(project.premise, main);
   assert.deepEqual(plain(G.summary(project)), summary);
 });
+
+test('centerlines are hidden in new projects and legacy saves without changing outlines or areas', () => {
+  const project = M.defaultProject();
+  assert.equal(project.meta.showPremiseCenterlines, false);
+  addMain(project);
+  addToilet(project);
+  const outlines = plain(M.premiseOutlines(project)), summary = plain(G.summary(project));
+  delete project.meta.showPremiseCenterlines;
+  const loaded = M.deserialize(M.serialize(project));
+  assert.equal(loaded.meta.showPremiseCenterlines, false);
+  assert.deepEqual(plain(M.premiseOutlines(loaded)), outlines);
+  assert.deepEqual(plain(G.summary(loaded)), summary);
+});
+
+test('centerline visibility survives saving, loading, and repeated loading in either state', () => {
+  for (const visible of [true, false]) {
+    const project = M.defaultProject();
+    project.meta.showPremiseCenterlines = visible;
+    addMain(project);
+    addToilet(project);
+    const saved = M.serialize(project), loaded = M.deserialize(saved);
+    assert.equal(loaded.meta.showPremiseCenterlines, visible);
+    assert.deepEqual(plain(M.premiseOutlines(loaded)), plain(M.premiseOutlines(project)));
+    assert.equal(M.deserialize(M.serialize(loaded)).meta.showPremiseCenterlines, visible);
+  }
+});
+
+test('only the explicit boolean true enables centerlines when loading a save', () => {
+  for (const value of [null, 0, 1, '', 'false', 'true', [], {}]) {
+    const project = M.defaultProject();
+    project.meta.showPremiseCenterlines = value;
+    assert.equal(M.deserialize(M.serialize(project)).meta.showPremiseCenterlines, false,
+      `invalid saved visibility ${JSON.stringify(value)} must stay hidden`);
+  }
+});
+
+// Record the actual Canvas stroke commands, including saved drawing styles, so
+// these tests distinguish the centerline from both physical wall outlines.
+function recordingCanvas() {
+  const strokes = [], stack = [];
+  let currentPath = [];
+  const ctx = {
+    strokeStyle: '#000', lineWidth: 1, globalAlpha: 1, dash: [],
+    save() {
+      stack.push({ strokeStyle: this.strokeStyle, lineWidth: this.lineWidth,
+        globalAlpha: this.globalAlpha, dash: [...this.dash] });
+    },
+    restore() { Object.assign(this, stack.pop()); },
+    beginPath() { currentPath = []; },
+    moveTo(x, y) { currentPath.push(['moveTo', x, y]); },
+    lineTo(x, y) { currentPath.push(['lineTo', x, y]); },
+    closePath() { currentPath.push(['closePath']); },
+    setLineDash(dash) { this.dash = Array.from(dash); },
+    stroke() {
+      strokes.push({ color: this.strokeStyle, width: this.lineWidth, alpha: this.globalAlpha,
+        dash: [...this.dash], path: currentPath.map((command) => [...command]) });
+    },
+    fillRect() {},
+  };
+  return { ctx, strokes, canvas: { width: 800, height: 600 } };
+}
+
+const centerlineColors = ['#1234ab', '#ab3412'];
+function renderOutlines(project, layer, print) {
+  const { ctx, canvas, strokes } = recordingCanvas();
+  R.setLayer(layer);
+  R.render(ctx, canvas, project, { selectedId: null }, { print });
+  return {
+    centerlines: strokes.filter((stroke) => centerlineColors.includes(stroke.color)),
+    walls: strokes.filter((stroke) => stroke.color === '#000'),
+  };
+}
+
+for (const layer of ['plan', 'kyuseki', 'lighting']) {
+  for (const print of [false, true]) {
+    test(`centerline off/on/off preserves both walls and geometry on ${layer} (${print ? 'print' : 'screen'})`, () => {
+      const project = M.defaultProject();
+      project.meta.showPaperFrame = false;
+      const outlines = [addMain(project), addToilet(project)];
+      outlines.forEach((outline, i) => { outline.lineColor = centerlineColors[i]; });
+      const geometry = plain(M.premiseOutlines(project)), summary = plain(G.summary(project));
+      const expectedCenterlines = outlines.map((outline, i) => {
+        const region = G.premiseRegionLike(outline);
+        return { color: centerlineColors[i], path: [
+          ...Array.from(region.points, (point, j) => {
+            const p = R.worldToScreen(region.x + point.x, region.y + point.y);
+            return [j === 0 ? 'moveTo' : 'lineTo', p.x, p.y];
+          }),
+          ['closePath'],
+        ] };
+      });
+      let originalWalls;
+      for (const visible of [false, true, false]) {
+        project.meta.showPremiseCenterlines = visible;
+        const rendered = renderOutlines(project, layer, print);
+        const shouldShow = visible && layer !== 'lighting';
+        assert.deepEqual(rendered.centerlines.map(({ color, path }) => ({ color, path })),
+          shouldShow ? expectedCenterlines : [], `centerline visibility is ${visible}`);
+        assert.equal(rendered.walls.length, 4, 'both inner and outer edges of both rooms remain visible');
+        if (!originalWalls) originalWalls = rendered.walls;
+        assert.deepEqual(rendered.walls, originalWalls, 'toggling cannot alter wall paths or styles');
+        assert.deepEqual(plain(M.premiseOutlines(project)), geometry, 'rendering cannot change room geometry');
+        assert.deepEqual(plain(G.summary(project)), summary, 'area totals are independent of visibility');
+      }
+      assert.equal(G.premiseCalc(project.premise).total, 24);
+    });
+  }
+}
