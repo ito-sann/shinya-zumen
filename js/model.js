@@ -314,6 +314,18 @@
     karaoke:     { label: 'カラオケ',         symbol: 'KAR' },
   };
 
+  /* 設備記号の表示倍率。実物の寸法や一覧表の数量とは独立して扱う。 */
+  const FIXTURE_SYMBOL_SCALE_MIN = 0.25;
+  const FIXTURE_SYMBOL_SCALE_MAX = 3;
+  function fixtureSymbolScale(fixture) {
+    const scale = fixture && fixture.symbolScale;
+    if (!Number.isFinite(scale) || scale <= 0) return 1;
+    return Math.max(FIXTURE_SYMBOL_SCALE_MIN, Math.min(FIXTURE_SYMBOL_SCALE_MAX, scale));
+  }
+  function fixtureSymbolRadius(fixture) {
+    return 220 * fixtureSymbolScale(fixture);
+  }
+
   /* 用紙サイズ(mm) */
   const PAPER_SIZES = {
     A4: { w: 297, h: 210 }, // 横向き基準
@@ -703,6 +715,7 @@
       y: 1500,
       watt: '',
       model: '',
+      symbolScale: 1,
       branch: '', // 一覧表での枝番・グループ分け(任意入力。例: A/B/C、吊高違いなど)
     };
     project.fixtures.push(item);
@@ -950,6 +963,8 @@
     project.furniture = obj.furniture || [];
     project.fittings = obj.fittings || [];
     project.fixtures = obj.fixtures || [];
+    // サイズ設定のない旧図面は従来の大きさ(100%)で読み込む。
+    for (const fixture of project.fixtures) fixture.symbolScale = fixtureSymbolScale(fixture);
     project.premise = obj.premise || null;
     project.additionalPremises = Array.isArray(obj.additionalPremises) ? obj.additionalPremises : [];
     project.underlay = obj.underlay || null;
@@ -1038,6 +1053,7 @@
 
   global.Model = {
     REGION_TYPES, AREA_USES, FURNITURE_CATALOG, FITTING_CATALOG, DOOR_KINDS, FIXTURE_CATALOG, PAPER_SIZES,
+    FIXTURE_SYMBOL_SCALE_MIN, FIXTURE_SYMBOL_SCALE_MAX, fixtureSymbolScale, fixtureSymbolRadius,
     FURNITURE_STYLES, defaultStyle, furniturePreset,
     SIGHTLINE_LIMIT, CHECKLIST_ITEMS,
     todayStr, defaultProject, nextId, nextRegionNumber,

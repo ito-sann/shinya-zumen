@@ -230,7 +230,8 @@
         const tol = Math.max(120, 8 / global.Render.view.zoom);
         if (distToSegment(wx, wy, el.x1, el.y1, el.x2, el.y2) <= tol) return el;
       } else if (item.kind === 'fixtures') {
-        const r = Math.max(280, 12 / global.Render.view.zoom);
+        // 記号と一緒に選択範囲も変え、小さく表示しても半径12pxは確保する。
+        const r = Math.max(280 * global.Model.fixtureSymbolScale(el), 12 / global.Render.view.zoom);
         if (Math.hypot(wx - el.x, wy - el.y) <= r) return el;
       } else if (item.kind === 'fittings') {
         if (inFittingHitArea(wx, wy, el)) return el;

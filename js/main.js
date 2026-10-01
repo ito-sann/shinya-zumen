@@ -1645,6 +1645,14 @@
       html += '<p class="muted">押すと備品姿図に切り替わります。姿図の正面/側面の四角に重ねて、横から見た形をクリックでなぞってください(Enterで確定)。</p>';
     }
     if (kind === 'fixtures') {
+      const symbolPercent = Math.round(M.fixtureSymbolScale(el) * 100);
+      html += `<label class="prop-row"><span>記号サイズ(%)</span>
+        <input type="number" id="fixtureSymbolSize" min="25" max="300" step="1" value="${symbolPercent}"></label>
+        <label class="field">小さく ⇔ 大きく
+          <input type="range" id="fixtureSymbolSizeSlider" min="25" max="300" step="1" value="${symbolPercent}" aria-label="記号サイズのスライダー"></label>
+        <div class="add-row"><button type="button" class="btn small" id="fixtureSymbolSizeReset">100%に戻す</button></div>
+        <button type="button" class="btn block" id="fixtureSymbolSizeAll">すべての照明・音響に適用</button>
+        <p class="muted">25〜300%で図面上の記号の大きさを調整します。100%が標準です。PDFにも反映されます。まとめて適用すると、この案件に配置済みのライト・スピーカーなどが同じサイズになります。</p>`;
       html += propText('ワット数', 'watt', el.watt || '');
       html += propText('型番メモ', 'model', el.model || '');
       html += propText('枝番・グループ(任意)', 'branch', el.branch || '');
@@ -1772,6 +1780,44 @@
         if (numEl) numEl.textContent = G.code(G.furnitureNumberMap(project)[el.id]);
       });
     });
+
+    const fixtureSize = box.querySelector('#fixtureSymbolSize');
+    if (fixtureSize) {
+      const slider = box.querySelector('#fixtureSymbolSizeSlider');
+      const syncSize = () => {
+        const percent = Math.round(M.fixtureSymbolScale(el) * 100);
+        fixtureSize.value = percent;
+        slider.value = percent;
+      };
+      const applySize = (percent) => {
+        el.symbolScale = M.fixtureSymbolScale({ symbolScale: Math.round(percent) / 100 });
+        syncSize();
+        draw();
+      };
+      fixtureSize.oninput = () => {
+        const percent = Number(fixtureSize.value);
+        if (Number.isFinite(percent) && percent >= 25 && percent <= 300) {
+          el.symbolScale = Math.round(percent) / 100;
+          slider.value = Math.round(percent);
+          draw();
+        }
+      };
+      fixtureSize.onchange = () => {
+        const percent = Number(fixtureSize.value);
+        if (fixtureSize.value.trim() && Number.isFinite(percent)) {
+          applySize(Math.max(25, Math.min(300, percent)));
+        } else syncSize();
+      };
+      slider.oninput = () => applySize(Number(slider.value));
+      box.querySelector('#fixtureSymbolSizeReset').onclick = () => applySize(100);
+      box.querySelector('#fixtureSymbolSizeAll').onclick = () => {
+        flushHistory();
+        const scale = M.fixtureSymbolScale(el);
+        project.fixtures.forEach((fixture) => { fixture.symbolScale = scale; });
+        draw();
+        flushHistory();
+      };
+    }
 
     box.querySelectorAll('[data-field]').forEach((inp) => {
       inp.addEventListener('input', (e) => {

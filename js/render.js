@@ -1048,7 +1048,8 @@
 
   function drawFixture(ctx, x, opts) {
     const p = worldToScreen(x.x, x.y);
-    const r = wpx(220); // アイコン半径(実寸220mm相当・図面に対して固定)
+    const symbolScale = global.Model.fixtureSymbolScale(x);
+    const r = wpx(global.Model.fixtureSymbolRadius(x));
     const branch = (x.branch || '').trim();
     const sym = ((global.Model.FIXTURE_CATALOG[x.kind] || {}).symbol || '?') + (branch ? '-' + branch : '');
     ctx.save();
@@ -1062,7 +1063,7 @@
     ctx.fillStyle = '#5d4037';
     // 記号が長い(枝番つき等)場合は円に収まるよう文字を少し縮める
     const fontMm = sym.length > 3 ? 170 * (3 / sym.length) : 170;
-    ctx.font = `bold ${wpx(fontMm)}px sans-serif`;
+    ctx.font = `bold ${wpx(fontMm * symbolScale)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(sym, p.x, p.y);
@@ -2218,7 +2219,7 @@
           });
         }
       } else if (item.kind === 'fixtures') {
-        if (vis.fixtures) drawFixture(ctx, el, { selected: state.selectedId === el.id });
+        if (vis.fixtures) drawFixture(ctx, el, { selected: currentSelectedId === el.id });
       } else if (item.kind === 'dimensions') {
         if (dimVisibleOnLayer(el, currentLayer)) drawManualDim(ctx, el, { selected: state.selectedId === el.id });
       } else if (item.kind === 'notes') {

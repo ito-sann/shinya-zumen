@@ -758,7 +758,8 @@
       consider(g.x, g.y); consider(g.x + g.w, g.y + g.h);
     }
     for (const x of project.fixtures) {
-      consider(x.x, x.y);
+      const r = global.Model.fixtureSymbolRadius(x);
+      consider(x.x - r, x.y - r); consider(x.x + r, x.y + r);
     }
     // 下絵(表示中のみ)。「全体表示にもどす」で下絵も見える範囲に入れる
     const u = project.underlay;
