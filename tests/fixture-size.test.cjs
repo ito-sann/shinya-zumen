@@ -103,9 +103,10 @@ function recordEquipment(project, selectedId, print) {
     arc(x, y, radius) { arcs.push({ x, y, radius }); },
     fill() { if (arcs.length) arcs.at(-1).fill = this.fillStyle; },
     fillText(text, x, y) { labels.push({ text, x, y, font: this.font }); },
+    stroke() { if (arcs.length && !('stroke' in arcs.at(-1))) arcs.at(-1).stroke = this.strokeStyle; },
     measureText(text) { return { width: String(text).length * 8 }; },
   };
-  for (const name of ['beginPath', 'closePath', 'moveTo', 'lineTo', 'stroke', 'fillRect', 'strokeRect', 'setLineDash']) {
+  for (const name of ['beginPath', 'closePath', 'moveTo', 'lineTo', 'fillRect', 'strokeRect', 'setLineDash']) {
     ctx[name] = () => {};
   }
   R.setLayer('lighting');
@@ -124,8 +125,10 @@ test('screen and print scale the circle and its symbol together, while print omi
   const print = recordEquipment(project, fixture.id, true);
   assert.equal(screen.arcs[0].radius, 11);
   assert.equal(print.arcs[0].radius, 11);
-  assert.equal(screen.arcs[0].fill, '#ffe082');
-  assert.equal(print.arcs[0].fill, '#fff8e1');
+  assert.equal(screen.arcs[0].fill, '#ffffff');
+  assert.equal(print.arcs[0].fill, '#ffffff');
+  assert.equal(screen.arcs[0].stroke, '#d32f2f');
+  assert.equal(print.arcs[0].stroke, '#333333');
   assert.equal(screen.labels.find((label) => label.text === 'SP').font, 'bold 8.5px sans-serif');
   assert.equal(print.labels.find((label) => label.text === 'SP').font, 'bold 8.5px sans-serif');
   fixture.symbolScale = 2;

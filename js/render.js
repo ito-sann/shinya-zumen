@@ -1055,12 +1055,12 @@
     ctx.save();
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = opts.selected ? '#ffe082' : '#fff8e1';
+    ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.lineWidth = opts.selected ? 3 : 1.5;
-    ctx.strokeStyle = opts.selected ? '#d32f2f' : '#f9a825';
+    ctx.strokeStyle = opts.selected ? '#d32f2f' : '#333333';
     ctx.stroke();
-    ctx.fillStyle = '#5d4037';
+    ctx.fillStyle = '#333333';
     // 記号が長い(枝番つき等)場合は円に収まるよう文字を少し縮める
     const fontMm = sym.length > 3 ? 170 * (3 / sym.length) : 170;
     ctx.font = `bold ${wpx(fontMm * symbolScale)}px sans-serif`;
