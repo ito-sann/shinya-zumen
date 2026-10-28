@@ -811,7 +811,7 @@
       ctx.moveTo(0, vy);
       ctx.lineTo(0, -h / 2 - h * 0.06);
       ctx.stroke();
-      labelBelow(ctx, g, h, line, '小便器');
+      labelBelow(ctx, g, h, line, '男性用小便器');
     } else if (g.kind === 'washbasin') {
       // 手洗い器(CAD図を模倣): 壁付きの洗面器。壁線 + 水栓(ハンドル2つと吐水口) +
       // 下がすぼまる角丸の外形 + 内側の鉢の輪郭 + 手前の縁の曲線 + あふれ止めの穴
