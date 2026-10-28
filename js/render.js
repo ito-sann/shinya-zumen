@@ -773,44 +773,50 @@
       ctx.stroke();
       labelBelow(ctx, g, h, line, '和式便器');
     } else if (g.kind === 'urinal') {
-      // 小便器(ストール型・CAD図を模倣): 上が壁付きの角丸、下すぼまりの盾形の外形 +
-      // 波形の鉢の縁 + 上部中央の洗浄弁(小箱)と給水管
+      // 壁付け小便器の平面記号。左右対称の滑らかな便鉢と、簡潔な給水部。
       ctx.strokeStyle = line;
-      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : 'rgba(255,255,255,0.9)';
-      const r = w * 0.10;
+      ctx.fillStyle = sel ? 'rgba(211,47,47,.12)' : '#fff';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const outlineWidth = Math.min(ctx.lineWidth, Math.max(0.9, Math.min(w, h) * 0.045));
+      ctx.lineWidth = outlineWidth;
+      // 外形: 壁側は平ら、手前は丸く連続するU字。尖りや波打ちを作らない。
       ctx.beginPath();
-      ctx.moveTo(-w / 2 + r, -h / 2);
-      ctx.lineTo(w / 2 - r, -h / 2);
-      ctx.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
-      ctx.lineTo(w / 2, h * 0.02);
-      // 右肩: 内側へ凹みながら下へ
-      ctx.bezierCurveTo(w / 2, h * 0.24, w * 0.24, h * 0.18, w * 0.17, h * 0.32);
-      // 中央下のふくらみ(鉢の先端)
-      ctx.bezierCurveTo(w * 0.12, h * 0.44, w * 0.05, h / 2, 0, h / 2);
-      ctx.bezierCurveTo(-w * 0.05, h / 2, -w * 0.12, h * 0.44, -w * 0.17, h * 0.32);
-      ctx.bezierCurveTo(-w * 0.24, h * 0.18, -w / 2, h * 0.24, -w / 2, h * 0.02);
-      ctx.lineTo(-w / 2, -h / 2 + r);
-      ctx.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+      ctx.moveTo(-w * 0.32, -h * 0.34);
+      ctx.lineTo(w * 0.32, -h * 0.34);
+      ctx.bezierCurveTo(w * 0.44, -h * 0.34, w * 0.50, -h * 0.24, w * 0.50, -h * 0.10);
+      ctx.lineTo(w * 0.50, h * 0.07);
+      ctx.bezierCurveTo(w * 0.50, h * 0.31, w * 0.29, h * 0.50, 0, h * 0.50);
+      ctx.bezierCurveTo(-w * 0.29, h * 0.50, -w * 0.50, h * 0.31, -w * 0.50, h * 0.07);
+      ctx.lineTo(-w * 0.50, -h * 0.10);
+      ctx.bezierCurveTo(-w * 0.50, -h * 0.24, -w * 0.44, -h * 0.34, -w * 0.32, -h * 0.34);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
-      // 鉢の縁(上辺が波形の内側ライン)
+      // 内側の便鉢。外形との間隔を広く取り、縮小時も二重線を分離する。
+      ctx.lineWidth = Math.max(0.7, outlineWidth * 0.75);
       ctx.beginPath();
-      ctx.moveTo(-w * 0.30, h * 0.10);
-      ctx.bezierCurveTo(-w * 0.32, -h * 0.02, -w * 0.16, 0, -w * 0.08, -h * 0.02);
-      ctx.bezierCurveTo(-w * 0.03, -h * 0.06, w * 0.03, -h * 0.06, w * 0.08, -h * 0.02);
-      ctx.bezierCurveTo(w * 0.16, 0, w * 0.32, -h * 0.02, w * 0.30, h * 0.10);
-      ctx.bezierCurveTo(w * 0.30, h * 0.24, w * 0.12, h * 0.34, 0, h * 0.34);
-      ctx.bezierCurveTo(-w * 0.12, h * 0.34, -w * 0.30, h * 0.24, -w * 0.30, h * 0.10);
+      ctx.moveTo(-w * 0.24, -h * 0.20);
+      ctx.lineTo(w * 0.24, -h * 0.20);
+      ctx.bezierCurveTo(w * 0.33, -h * 0.20, w * 0.36, -h * 0.14, w * 0.36, -h * 0.04);
+      ctx.lineTo(w * 0.36, h * 0.06);
+      ctx.bezierCurveTo(w * 0.36, h * 0.23, w * 0.20, h * 0.35, 0, h * 0.35);
+      ctx.bezierCurveTo(-w * 0.20, h * 0.35, -w * 0.36, h * 0.23, -w * 0.36, h * 0.06);
+      ctx.lineTo(-w * 0.36, -h * 0.04);
+      ctx.bezierCurveTo(-w * 0.36, -h * 0.14, -w * 0.33, -h * 0.20, -w * 0.24, -h * 0.20);
       ctx.closePath();
       ctx.stroke();
-      // 洗浄弁(上部中央の小箱)と給水管
-      const vw = w * 0.16, vh = h * 0.16, vy = -h / 2 + h * 0.05;
-      roundRectPath(ctx, -vw / 2, vy, vw, vh, vw * 0.3);
-      ctx.fill(); ctx.stroke();
+      // 排水口は円ひとつに省略し、細部が黒く潰れないようにする。
       ctx.beginPath();
-      ctx.moveTo(0, vy);
-      ctx.lineTo(0, -h / 2 - h * 0.06);
+      ctx.arc(0, h * 0.18, Math.min(w, h) * 0.045, 0, Math.PI * 2);
       ctx.stroke();
+      // 背面中央の洗浄弁と短い給水管。全体を指定寸法の内側へ収める。
+      ctx.lineWidth = outlineWidth;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.38);
+      ctx.lineTo(0, -h * 0.34);
+      ctx.stroke();
+      roundRectPath(ctx, -w * 0.10, -h * 0.50, w * 0.20, h * 0.12, Math.min(w, h) * 0.025);
+      ctx.fill(); ctx.stroke();
       labelBelow(ctx, g, h, line, '男性用小便器');
     } else if (g.kind === 'washbasin') {
       // 手洗い器(CAD図を模倣): 壁付きの洗面器。壁線 + 水栓(ハンドル2つと吐水口) +
