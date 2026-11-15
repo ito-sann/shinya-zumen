@@ -1481,6 +1481,35 @@
         html += '</div></div>';
       }
       html += `<label class="check-row"><input type="checkbox" data-fieldbool="showDims" ${el.showDims !== false ? 'checked' : ''}> 辺の長さを表示</label>`;
+      const dimShape = el.shape || 'rect';
+      if (dimShape === 'polygon') {
+        const pts = el.points || [];
+        const sides = el.polygonDimSides;
+        const reversed = sides && sides.vertexCount === pts.length && Array.isArray(sides.reversed)
+          ? new Set(sides.reversed) : new Set();
+        html += '<div class="prop-row"><span>辺の長さの位置</span><div class="check-stack">';
+        pts.forEach((p, i) => {
+          html += `<label class="check-row">辺${i + 1}（P${i + 1}〜P${(i + 1) % pts.length + 1}）<select data-polygon-dim-side="${i}">
+            <option value="default"${reversed.has(i) ? '' : ' selected'}>既定</option>
+            <option value="reverse"${reversed.has(i) ? ' selected' : ''}>反対側</option>
+          </select></label>`;
+        });
+        html += '</div></div><p class="muted">各辺の数値を既定位置の反対側へ移せます。頂点数が変わると辺の位置設定は既定に戻ります。</p>';
+      } else {
+        if (dimShape !== 'trapezoid') {
+          html += `<label class="prop-row"><span>${dimShape === 'triangle' ? '底辺' : '幅'}の寸法線</span><select data-region-dim-side="dimWidthSide">
+            <option value="bottom"${el.dimWidthSide === 'top' ? '' : ' selected'}>下</option>
+            <option value="top"${el.dimWidthSide === 'top' ? ' selected' : ''}>上</option>
+          </select></label>`;
+        }
+        html += `<label class="prop-row"><span>${dimShape === 'rect' ? '奥行' : '高さ'}の寸法線</span><select data-region-dim-side="dimHeightSide">
+          <option value="left"${el.dimHeightSide === 'right' ? '' : ' selected'}>左</option>
+          <option value="right"${el.dimHeightSide === 'right' ? ' selected' : ''}>右</option>
+        </select></label>`;
+        html += '<p class="muted">寸法線の位置は区画の向きが基準です。区画を回転すると寸法線も一緒に回転します。';
+        if (dimShape === 'trapezoid') html += '上底と下底はそれぞれ上側と下側に固定されます。';
+        html += '面積の計算には影響しません。</p>';
+      }
       const edgeCount = regionEdgeCount(el);
       const hiddenEdges = new Set((el.hiddenEdges || []).map((n) => parseInt(n, 10)));
       const edgeWallThickness = el.edgeWallThickness || {};
@@ -1848,6 +1877,24 @@
         el[e.target.dataset.fieldbool] = e.target.checked;
         refresh();
       });
+    });
+
+    box.querySelectorAll('[data-region-dim-side]').forEach((input) => {
+      input.onchange = () => {
+        el[input.dataset.regionDimSide] = input.value;
+        refresh();
+      };
+    });
+    box.querySelectorAll('[data-polygon-dim-side]').forEach((input) => {
+      input.onchange = () => {
+        const count = (el.points || []).length;
+        const old = el.polygonDimSides;
+        const reversed = new Set(old && old.vertexCount === count && Array.isArray(old.reversed) ? old.reversed : []);
+        const edge = Number(input.dataset.polygonDimSide);
+        if (input.value === 'reverse') reversed.add(edge); else reversed.delete(edge);
+        el.polygonDimSides = { vertexCount: count, reversed: Array.from(reversed).sort((a, b) => a - b) };
+        refresh();
+      };
     });
 
     // カタログ備品: 姿図スタイル(正面図・側面図の形)を切り替える

@@ -522,6 +522,9 @@
    * 頂点編集後に呼ぶことで、当たり判定・全体表示が正しく働く。 */
   function normalizePolygon(region) {
     if (region.shape !== 'polygon' || !region.points || !region.points.length) return;
+    if (region.polygonDimSides && region.polygonDimSides.vertexCount !== region.points.length) {
+      delete region.polygonDimSides; // 頂点の増減後、別の辺に古い設定を誤適用しない
+    }
     const minX = Math.min(...region.points.map((p) => p.x));
     const minY = Math.min(...region.points.map((p) => p.y));
     if (minX !== 0 || minY !== 0) {
@@ -958,6 +961,12 @@
           color: r.color || REGION_TYPES.other.color,
         });
       });
+    for (const region of project.regions) {
+      if (region.shape === 'polygon' && region.polygonDimSides &&
+          (!Array.isArray(region.points) || region.polygonDimSides.vertexCount !== region.points.length)) {
+        delete region.polygonDimSides;
+      }
+    }
     project.walls = obj.walls || [];
     project.lines = obj.lines || [];
     project.furniture = obj.furniture || [];

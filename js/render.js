@@ -339,6 +339,10 @@
     const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
     const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
     const showPointLabels = opts && opts.showPointLabels === true;
+    const sides = r.polygonDimSides;
+    // 頂点数が変わったときは以前の辺番号を流用しない。
+    const reversed = sides && sides.vertexCount === pts.length && Array.isArray(sides.reversed)
+      ? new Set(sides.reversed) : new Set();
     ctx.save();
     ctx.font = `${fontPx(240)}px sans-serif`;
     ctx.textAlign = 'center';
@@ -350,7 +354,8 @@
       const ox = mx - cx, oy = my - cy;
       const d = Math.hypot(ox, oy) || 1;
       ctx.fillStyle = '#1565c0';
-      ctx.fillText(edges[i].toFixed(2) + 'm', mx + (ox / d) * wpx(300), my + (oy / d) * wpx(300));
+      const sign = reversed.has(i) ? -1 : 1;
+      ctx.fillText(edges[i].toFixed(2) + 'm', mx + sign * (ox / d) * wpx(300), my + sign * (oy / d) * wpx(300));
       if (showPointLabels) {
         // 頂点番号は頂点の外側に
         const vx = a.x - cx, vy = a.y - cy;
@@ -452,19 +457,21 @@
     ctx.lineWidth = 1;
     ctx.font = `${fontPx(240)}px sans-serif`;
     ctx.textAlign = 'center';
-    // 底辺/幅(下辺の外側)
-    const by = h / 2 + off;
-    ctx.textBaseline = 'top';
+    // 台形は上底と下底が別の長さなので、従来どおり上下を固定する。
+    const widthAbove = shape !== 'trapezoid' && r.dimWidthSide === 'top';
+    const by = widthAbove ? -h / 2 - off : h / 2 + off;
+    ctx.textBaseline = widthAbove ? 'bottom' : 'top';
     ctx.beginPath(); ctx.moveTo(-w / 2, by); ctx.lineTo(w / 2, by); ctx.stroke();
     tick(ctx, -w / 2, by); tick(ctx, w / 2, by);
-    ctx.fillText(global.Geometry.fmtM(r.w) + 'm', 0, by + wpx(50));
-    // 高さ/奥行(左辺の外側)
-    const wx = -w / 2 - off;
-    ctx.textBaseline = 'bottom';
+    ctx.fillText(global.Geometry.fmtM(r.w) + 'm', 0, by + (widthAbove ? -wpx(50) : wpx(50)));
+    // 高さ/奥行は区画の左側か右側を選べる。
+    const heightRight = r.dimHeightSide === 'right';
+    const wx = heightRight ? w / 2 + off : -w / 2 - off;
+    ctx.textBaseline = heightRight ? 'top' : 'bottom';
     ctx.beginPath(); ctx.moveTo(wx, -h / 2); ctx.lineTo(wx, h / 2); ctx.stroke();
     tick(ctx, wx, -h / 2); tick(ctx, wx, h / 2);
     ctx.save();
-    ctx.translate(wx - wpx(50), 0);
+    ctx.translate(wx + (heightRight ? wpx(50) : -wpx(50)), 0);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(global.Geometry.fmtM(r.h) + 'm', 0, 0);
     ctx.restore();
