@@ -368,7 +368,7 @@
   }
 
   /* 作図中の多角形(下書き)を描く */
-  function drawDraft(ctx, draft) {
+  function drawDraft(ctx, draft, showDistance) {
     const pts = draft.points.map((p) => worldToScreen(p.x, p.y));
     if (!pts.length) return;
     ctx.save();
@@ -384,6 +384,16 @@
     }
     ctx.stroke();
     ctx.setLineDash([]);
+    if (showDistance && draft.cursor) {
+      const last = draft.points[draft.points.length - 1];
+      const c = worldToScreen(draft.cursor.x, draft.cursor.y);
+      const lenM = global.Geometry.mmToM(Math.hypot(draft.cursor.x - last.x, draft.cursor.y - last.y));
+      ctx.fillStyle = '#2563eb';
+      ctx.font = `${fontPx(240)}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(lenM.toFixed(2) + 'm', c.x + wpx(150), c.y);
+    }
     // 置いた頂点(最初の点は閉じる目印として大きめ)
     pts.forEach((p, i) => {
       ctx.beginPath();
@@ -2254,7 +2264,7 @@
     if (state.measure) drawMeasureDraft(ctx, state.measure);
     // 多角形の作図中なら下書きを最前面に描く
     if (state.draft && state.draft.points) {
-      drawDraft(ctx, state.draft);
+      drawDraft(ctx, state.draft, ['line', 'lineSingle', 'wall', 'premise'].includes(state.draftKind));
     }
     if (project.meta.showNorthMark) {
       drawNorthMark(ctx, canvas, project);

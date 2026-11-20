@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.87.5">
+  <link rel="stylesheet" href="css/style.css?v=1.87.6">
 </head>
 <body>
   <header class="topbar">
@@ -140,8 +140,9 @@
             </select>
           </label>
         </div>
-        <button id="btnDrawLine" class="btn block">線を描く(クリックで点を置く)</button>
-        <p class="muted">囲わなくてよい自由な線です。クリックで点を置き、2点なら直線、3点以上なら折れ線に。ダブルクリックかEnterで確定します。面積計算には影響しません。色・線種はあとから「選択中の要素」で変えられます。</p>
+        <button id="btnDrawLineSingle" class="btn block">2点で線を描く</button>
+        <button id="btnDrawLine" class="btn block">点を続けて置いて線を描く</button>
+        <p class="muted">2点で描く場合は2回クリックで確定。点を続けて置く場合は、ダブルクリックかEnterで確定します。作図中は直前の点からの距離を表示します。面積計算には影響しません。色・線種はあとから変更できます。</p>
       </section>
 
       <section class="group" data-layers="plan">
@@ -356,13 +357,13 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.87.5"></script>
-  <script src="js/geometry.js?v=1.87.5"></script>
-  <script src="js/render.js?v=1.87.5"></script>
-  <script src="js/interactions.js?v=1.87.5"></script>
-  <script src="js/print.js?v=1.87.5"></script>
-  <script src="js/forms.js?v=1.87.5"></script>
-  <script src="js/main.js?v=1.87.5"></script>
+  <script src="js/model.js?v=1.87.6"></script>
+  <script src="js/geometry.js?v=1.87.6"></script>
+  <script src="js/render.js?v=1.87.6"></script>
+  <script src="js/interactions.js?v=1.87.6"></script>
+  <script src="js/print.js?v=1.87.6"></script>
+  <script src="js/forms.js?v=1.87.6"></script>
+  <script src="js/main.js?v=1.87.6"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

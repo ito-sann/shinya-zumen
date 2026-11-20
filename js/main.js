@@ -602,16 +602,16 @@
     };
     // 自由な線(折れ線)の作図。囲わなくてよく、2点なら直線・3点以上なら折れ線。
     // ダブルクリックかEnterで確定。作図中にもう一度押すと: 2点以上なら確定、未満なら中止。
-    $('btnDrawLine').onclick = () => {
+    function startLine(kind) {
       if (state.draft) {
-        if (state.draftKind !== 'line') return; // 他の作図中は無効
+        if (state.draftKind !== kind) return; // 他の作図中は無効
         if (state.draft.points.length >= 2) I.finishPolygon(state);
         else I.cancelPolygon(state);
         draw();
         return;
       }
       if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
-      state.draftKind = 'line';
+      state.draftKind = kind;
       const color = $('lineColor').value;
       const style = $('lineStyle').value;
       I.beginPolygon(state, (pts) => {
@@ -620,7 +620,9 @@
         refresh(); showProps(l);
       }, { minPoints: 2 });
       draw();
-    };
+    }
+    $('btnDrawLine').onclick = () => startLine('line');
+    $('btnDrawLineSingle').onclick = () => startLine('lineSingle');
     // 種類を変えたら、その種類で選べる姿図スタイルに並べ替える
     $('furnKind').onchange = populateFurnStyles;
     // 備品姿図のカードを自動整列に戻す(手動で動かした位置をすべて消す)
@@ -785,12 +787,19 @@
     const btnR = $('btnDrawPoly');
     const btnP = $('btnDrawPremise');
     const btnF = $('btnDrawFurnPoly');
+    const btnW = $('btnDrawWall');
+    const btnL = $('btnDrawLine');
+    const btnS = $('btnDrawLineSingle');
     btnR.textContent = '多角形で描く';
     btnP.textContent = '外周を追加して描く';
     btnF.textContent = '自由な形で描く(真上から)';
+    btnW.textContent = '内壁を2点で描く';
+    btnL.textContent = '点を続けて置いて線を描く';
+    btnS.textContent = '2点で線を描く';
     btnR.classList.remove('danger');
     btnP.classList.remove('danger');
     btnF.classList.remove('danger');
+    [btnW, btnL, btnS].forEach((b) => b.classList.remove('danger'));
     if (!draft) {
       state.draftKind = null;
       $('hint').textContent = HINT_DEFAULT;
@@ -800,6 +809,16 @@
     if (state.draftKind === 'profile') {
       $('hint').textContent = (state.profileTarget && state.profileTarget.view === 'side' ? '側面' : '正面')
         + 'の形をなぞる: 姿図の四角に重ねてクリックで角を置く / Enter・最初の点クリックで確定 / Escで中止';
+      return;
+    }
+    if (['wall', 'line', 'lineSingle'].includes(state.draftKind)) {
+      const btn = state.draftKind === 'wall' ? btnW : state.draftKind === 'line' ? btnL : btnS;
+      const canFinish = state.draftKind === 'line' && draft.points.length >= 2;
+      btn.textContent = canFinish ? '線の作図を確定' : '作図を中止(Esc)';
+      if (!canFinish) btn.classList.add('danger');
+      $('hint').textContent = state.draftKind === 'line'
+        ? '線の作図中: クリックで点を置く / ダブルクリック・Enterで確定 / Escで中止'
+        : '作図中: 1点目と2点目をクリックして確定 / Escで中止';
       return;
     }
     const btn = state.draftKind === 'premise' ? btnP
