@@ -317,7 +317,7 @@
       for (let i = 0; i < pts.length; i++) {
         const s = global.Render.worldToScreen(pts[i].x, pts[i].y);
         if (Math.hypot(p.x - s.x, p.y - s.y) <= 8) {
-          return { region: r, index: i, isCounterL, point: pts[i] };
+          return { region: r, kind: found.kind, index: i, isCounterL, point: pts[i] };
         }
       }
       return null;
@@ -452,6 +452,10 @@
         mode = v.isCounterL ? 'counterLVertex' : 'vertex';
         dragTarget = v.region;
         vertexIndex = v.index;
+        if (['walls', 'lines', 'premise'].includes(v.kind)) {
+          state.vertexMeasurement = { id: v.region.id, kind: v.kind, index: v.index };
+          onChange();
+        }
         if (v.isCounterL) {
           counterLStart = Object.assign({}, dragTarget);
           grabOffset = { x: w.x - v.point.x, y: w.y - v.point.y };
@@ -644,6 +648,10 @@
     const onMouseUp = () => {
       mode = null; dragTarget = null; vertexIndex = -1; sheetResize = null; counterLStart = null;
       canvas.style.cursor = '';
+      if (state.vertexMeasurement) {
+        state.vertexMeasurement = null;
+        onChange();
+      }
     };
 
     // ダブルクリックでも多角形を確定できる(3点以上)
@@ -742,6 +750,7 @@
 
     // 次回の attach で外せるように覚えておく
     canvas._detachInteractions = () => {
+      state.vertexMeasurement = null;
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('dblclick', onDblClick);
       canvas.removeEventListener('wheel', onWheel);
