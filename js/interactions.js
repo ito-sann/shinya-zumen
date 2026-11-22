@@ -355,6 +355,41 @@
         return;
       }
 
+      // 補正中は、図面上で辺または既存の端・角を選ぶ。通常の移動操作は行わない。
+      const ortho = state.orthogonal;
+      if (!state.draft && ortho && ortho.picking && state.selectedId === ortho.id) {
+        const found = global.Model.findById(project, ortho.id);
+        if (!found) { state.orthogonal = null; onSelect(null); onChange(); return; }
+        const pts = global.Geometry.polygonAbsPoints(found.element);
+        const screen = pts.map(q => global.Render.worldToScreen(q.x, q.y));
+        if (ortho.picking === 'anchor') {
+          const eligible = ortho.scope === 'edge' && Number.isInteger(ortho.edgeIndex)
+            ? [ortho.edgeIndex, (ortho.edgeIndex + 1) % pts.length]
+            : screen.map((_, i) => i);
+          let best = -1, distance = 18;
+          for (const i of eligible) {
+            const d = Math.hypot(p.x - screen[i].x, p.y - screen[i].y);
+            if (d <= distance) { distance = d; best = i; }
+          }
+          if (best >= 0) { ortho.anchorIndex = best; ortho.picking = null; ortho.message = ''; }
+          else ortho.message = '固定したい端または角の近くをクリックしてください。';
+        } else {
+          const count = found.kind === 'premise' ? pts.length : pts.length - 1;
+          const wallWidth = found.kind === 'premise' ? (found.element.wallThickness || 0) : (found.element.thickness || 0);
+          let best = -1, distance = Math.max(14, wallWidth * global.Render.view.zoom);
+          for (let i = 0; i < count; i++) {
+            const a = screen[i], b = screen[(i + 1) % screen.length];
+            const d = distToSegment(p.x, p.y, a.x, a.y, b.x, b.y);
+            if (d <= distance) { distance = d; best = i; }
+          }
+          if (best >= 0) { ortho.edgeIndex = best; ortho.anchorIndex = null; ortho.picking = null; ortho.message = ''; }
+          else ortho.message = '補正したい辺の近くをクリックしてください。';
+        }
+        ortho.preview = null; ortho.source = null;
+        onSelect(found.element); onChange();
+        return;
+      }
+
       // 選択中のメモの矢印の先端をつかんだら、先端の移動モード(どの図面でも)
       if (state.selectedId && !state.draft) {
         const found = global.Model.findById(project, state.selectedId);
@@ -695,6 +730,11 @@
       // 寸法線の作図中: Esc で中止
       if (state.measure) {
         if (e.key === 'Escape') { cancelMeasure(state); onChange(); }
+        return;
+      }
+      if (state.orthogonal && e.key === 'Escape') {
+        const found = global.Model.findById(project, state.orthogonal.id);
+        state.orthogonal = null; onSelect(found ? found.element : null); onChange();
         return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId) {

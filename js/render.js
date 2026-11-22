@@ -2113,6 +2113,54 @@
     ctx.restore();
   }
 
+  /* 補正の対象と仮の形は画面だけに表示し、図面データ・PDFには含めない。 */
+  function drawOrthogonalPreview(ctx, project, state) {
+    const o = state.orthogonal;
+    if (!o || o.id !== state.selectedId) return;
+    const found = global.Model.findById(project, o.id);
+    if (!found) return;
+    const original = global.Geometry.polygonAbsPoints(found.element);
+    if (original.length < 2) return;
+    const closed = found.kind === 'premise';
+    const toScreen = pts => pts.map(p => worldToScreen(p.x, p.y));
+    const pts = toScreen(original);
+    ctx.save();
+    if (o.scope === 'edge' && Number.isInteger(o.edgeIndex) && pts[o.edgeIndex]) {
+      const a = pts[o.edgeIndex], b = pts[(o.edgeIndex + 1) % pts.length];
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 5; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    if (o.preview) {
+      const preview = toScreen(o.preview);
+      ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
+      ctx.beginPath(); ctx.moveTo(preview[0].x, preview[0].y);
+      for (let i = 1; i < preview.length; i++) ctx.lineTo(preview[i].x, preview[i].y);
+      if (closed) ctx.closePath();
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = `${Math.max(11, fontPx(240))}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.lineWidth = 3;
+      ctx.strokeStyle = '#fff'; ctx.fillStyle = '#1d4ed8';
+      const count = closed ? preview.length : preview.length - 1;
+      for (let i = 0; i < count; i++) {
+        const a = preview[i], b = preview[(i + 1) % preview.length];
+        const p = o.preview[i], q = o.preview[(i + 1) % preview.length];
+        const text = global.Geometry.mmToM(Math.hypot(p.x - q.x, p.y - q.y)).toFixed(2) + 'm';
+        const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2 + 17;
+        ctx.strokeText(text, x, y); ctx.fillText(text, x, y);
+      }
+    }
+    ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    pts.forEach((p, i) => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, i === o.anchorIndex ? 6 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = i === o.anchorIndex ? '#16a34a' : '#fff'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = i === o.anchorIndex ? '#15803d' : '#334155'; ctx.stroke();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.fillStyle = '#0f172a';
+      ctx.strokeText('P' + (i + 1), p.x + 7, p.y - 5);
+      ctx.fillText('P' + (i + 1), p.x + 7, p.y - 5);
+    });
+    ctx.restore();
+  }
+
   /* どのレイヤーで何を表示するか */
   function visibility(layer) {
     switch (layer) {
@@ -2291,7 +2339,10 @@
     if (state.draft && state.draft.points) {
       drawDraft(ctx, state.draft, ['line', 'lineSingle', 'wall', 'premise'].includes(state.draftKind));
     }
-    if (!(opts && opts.print)) drawSelectedEdgeMeasurements(ctx, project, state.selectedId);
+    if (!(opts && opts.print)) {
+      drawSelectedEdgeMeasurements(ctx, project, state.selectedId);
+      drawOrthogonalPreview(ctx, project, state);
+    }
     if (project.meta.showNorthMark) {
       drawNorthMark(ctx, canvas, project);
     }

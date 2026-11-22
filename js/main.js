@@ -219,6 +219,7 @@
   function adoptProject(p, opts) {
     project = p;
     state.selectedId = null;
+    state.orthogonal = null;
     I.attach(canvas, ctx, project, state, draw, selectElement);
     bindMeta();
     if (!(opts && opts.keepView)) R.fitToView(project, canvasCss());
@@ -332,6 +333,11 @@
       b.className = 'layer-tab' + (R.getLayer() === key ? ' active' : '');
       b.textContent = v.label;
       b.onclick = () => {
+        if (state.orthogonal && key !== R.getLayer()) {
+          state.orthogonal = null;
+          const found = M.findById(project, state.selectedId);
+          showProps(found ? found.element : null);
+        }
         R.setLayer(key);
         buildLayerTabs();
         refresh();
@@ -965,6 +971,20 @@
 
   /* ---- 描画と再計算 ---- */
   function draw() {
+    if (state.orthogonal && (state.orthogonal.id !== state.selectedId || state.draft || state.measure || state.underlayMove)) {
+      state.orthogonal = null;
+      const found = M.findById(project, state.selectedId);
+      showProps(found ? found.element : null);
+    }
+    if (state.orthogonal && state.orthogonal.preview) {
+      const o = state.orthogonal;
+      const found = M.findById(project, o.id);
+      if (!found || state.selectedId !== o.id || JSON.stringify(found.element) !== o.source) {
+        o.preview = null; o.source = null;
+        o.message = '図形が変更されたため、もう一度「補正後を確認」を押してください。';
+        showProps(found && state.selectedId === o.id ? found.element : null);
+      }
+    }
     R.render(ctx, canvasCss(), project, state);
     setDraftUi(state.draft); // 作図の進み具合に応じてボタン・ヒントを更新
     updateMeasureUi();       // 寸法線の作図中ボタン表示を更新
@@ -1434,9 +1454,54 @@
     box.innerHTML = html;
   }
 
+  /* 補正操作の状態は project に保存せず、確定時だけ図面に反映する。 */
+  function orthogonalPanel(el, kind) {
+    const o = state.orthogonal;
+    if (!o || o.id !== el.id) {
+      return '<button type="button" class="btn small" id="orthoOpen">水平・垂直に補正</button>';
+    }
+    const count = (el.points || []).length;
+    const closed = kind === 'premise';
+    const edgeCount = closed ? count : count - 1;
+    const selected = (value, current) => String(value) === String(current) ? ' selected' : '';
+    const edges = Array.from({ length: edgeCount }, (_, i) =>
+      `<option value="${i}"${selected(i, o.edgeIndex)}>辺${i + 1}（P${i + 1}〜P${(i + 1) % count + 1}）</option>`).join('');
+    let candidates = Array.from({ length: count }, (_, i) => i);
+    if (o.scope === 'edge') candidates = Number.isInteger(o.edgeIndex) ? [o.edgeIndex, (o.edgeIndex + 1) % count] : [];
+    const anchors = candidates.map(i => `<option value="${i}"${selected(i, o.anchorIndex)}>P${i + 1}</option>`).join('');
+    const edgeControl = o.scope === 'edge' ? `<label class="field">補正する辺
+      <select id="orthoEdge"><option value="">選んでください</option>${edges}</select></label>
+      <button type="button" class="btn small" id="orthoPickEdge">${o.picking === 'edge' ? '図面の辺をクリックしてください' : '図面で辺を選ぶ'}</button>
+      <label class="field">補正する向き<select id="orthoAxis"><option value="">選んでください</option>
+      <option value="horizontal"${selected('horizontal', o.axis)}>水平</option>
+      <option value="vertical"${selected('vertical', o.axis)}>垂直</option></select></label>
+      ${o.axis && o.lengthMode === 'keep' ? `<label class="field">固定した点からの向き<select id="orthoDirection">
+        <option value="">元の向きに近い側</option>
+        <option value="1"${selected('1', o.direction)}>${o.axis === 'horizontal' ? '右向き' : '下向き'}</option>
+        <option value="-1"${selected('-1', o.direction)}>${o.axis === 'horizontal' ? '左向き' : '上向き'}</option>
+        </select></label>` : ''}` :
+      '<p class="ortho-help">全体は各辺を、元の向きに近い水平または垂直に整えます。</p>';
+    return `<div class="ortho-panel"><strong>水平・垂直に補正</strong>
+      <label class="field">補正する範囲<select id="orthoScope">
+      <option value="edge"${selected('edge', o.scope)}>1辺だけ</option>
+      <option value="all"${selected('all', o.scope)}>全体</option></select></label>
+      ${edgeControl}
+      <label class="field">動かさない端・角<select id="orthoAnchor"><option value="">選んでください</option>${anchors}</select></label>
+      <button type="button" class="btn small" id="orthoPickAnchor" ${!candidates.length ? 'disabled' : ''}>${o.picking === 'anchor' ? '図面の端・角をクリックしてください' : '図面で端・角を選ぶ'}</button>
+      <label class="field">長さの扱い<select id="orthoLength"><option value="">選んでください</option>
+      <option value="keep"${selected('keep', o.lengthMode)}>長さを保つ</option>
+      <option value="change"${selected('change', o.lengthMode)}>長さが変わってもよい</option></select></label>
+      <p class="ortho-help">つながる辺の長さや傾きも変わることがあります。P番号は図面上に表示します。</p>
+      ${o.message ? `<p class="ortho-message" role="status">${esc(o.message)}</p>` : ''}
+      <button type="button" class="btn small" id="orthoPreview">補正後を確認</button>
+      ${o.preview ? '<p class="ortho-help">青い点線が補正後の形です。図面はまだ変更されていません。</p><button type="button" class="btn primary small" id="orthoApply">この内容で適用</button>' : ''}
+      <button type="button" class="btn small" id="orthoCancel">補正をやめる</button></div>`;
+  }
+
   /* ---- プロパティ編集 ---- */
   function showProps(el) {
     const box = $('props');
+    if (state.orthogonal && (!el || el.id !== state.orthogonal.id)) state.orthogonal = null;
     if (!el) { box.innerHTML = '<p class="muted">要素を選ぶと編集できます。</p>'; return; }
     if (el.kind === 'sheetTable' || (el.id || '').indexOf('sheet-table:') === 0) {
       const layer = el.layer || String(el.id).replace('sheet-table:', '');
@@ -1594,6 +1659,9 @@
     } else {
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
+    }
+    if (['lines', 'walls', 'premise'].includes(kind) && (el.points || []).length >= 2) {
+      html += orthogonalPanel(el, kind);
     }
     if (kind === 'notes') {
       // 矢印(引き出し線)の有無を切り替えられる
@@ -1755,8 +1823,7 @@
     if (kind === 'walls') {
       // 内壁: 見た目だけの壁(区画の求積には使わない)。頂点はキャンバス上でドラッグでも修正可。
       html += propNum('壁厚(mm)', 'thickness', el.thickness || 100);
-      html += `<div class="add-row"><button class="btn small" id="btnWallStraighten">水平/垂直に補正</button></div>`;
-      html += '<p class="muted">見た目だけの壁で、区画の面積計算(求積表)には影響しません。「水平/垂直に補正」を押すと、傾きに近いほうのまっすぐな壁に直せます。頂点はキャンバス上でドラッグでも動かせます。</p>';
+      html += '<p class="muted">見た目だけの壁で、区画の面積計算(求積表)には影響しません。頂点はキャンバス上でドラッグでも動かせます。</p>';
       const absPts = G.polygonAbsPoints(el);
       el.points.forEach((p, i) => {
         const abs = absPts[i] || { x: el.x + p.x, y: el.y + p.y };
@@ -1781,7 +1848,6 @@
         html += `<label class="check-row"><input type="checkbox" data-line-layer="${layer}" ${lineLayers.indexOf(layer) >= 0 ? 'checked' : ''}> ${label}</label>`;
       });
       html += '</div></div>';
-      html += `<div class="add-row"><button class="btn small" id="btnLineStraighten">水平/垂直に補正</button></div>`;
       html += '<p class="muted">囲わない見た目だけの線で、面積計算には影響しません。頂点はキャンバス上でドラッグでも動かせます。</p>';
       const absPts = G.polygonAbsPoints(el);
       el.points.forEach((p, i) => {
@@ -1808,6 +1874,90 @@
         <button class="btn small danger" id="btnDel">この要素を削除</button></div>`;
     }
     box.innerHTML = html;
+
+    const openOrthogonal = box.querySelector('#orthoOpen');
+    if (openOrthogonal) openOrthogonal.onclick = () => {
+      if (state.draft || state.measure || state.underlayMove) {
+        alert('作図や下絵の移動を終了してから補正してください。');
+        return;
+      }
+      state.orthogonal = { id: el.id, kind, scope: 'edge',
+        edgeIndex: el.points.length === 2 ? 0 : null, anchorIndex: null,
+        axis: '', direction: '', lengthMode: '', preview: null, message: '', picking: null };
+      showProps(el); draw();
+    };
+    const o = state.orthogonal && state.orthogonal.id === el.id ? state.orthogonal : null;
+    if (o) {
+      const editOption = (fn) => {
+        fn(); o.preview = null; o.source = null; o.message = ''; o.picking = null;
+        showProps(el); draw();
+      };
+      box.querySelector('#orthoScope').onchange = (e) => editOption(() => {
+        o.scope = e.target.value; o.anchorIndex = null;
+        if (o.scope === 'edge' && el.points.length === 2) o.edgeIndex = 0;
+      });
+      const edgeSelect = box.querySelector('#orthoEdge');
+      if (edgeSelect) edgeSelect.onchange = (e) => editOption(() => {
+        o.edgeIndex = e.target.value === '' ? null : Number(e.target.value);
+        o.anchorIndex = null;
+      });
+      const axisSelect = box.querySelector('#orthoAxis');
+      if (axisSelect) axisSelect.onchange = (e) => editOption(() => { o.axis = e.target.value; o.direction = ''; });
+      const directionSelect = box.querySelector('#orthoDirection');
+      if (directionSelect) directionSelect.onchange = (e) => editOption(() => { o.direction = e.target.value; });
+      box.querySelector('#orthoAnchor').onchange = (e) => editOption(() => {
+        o.anchorIndex = e.target.value === '' ? null : Number(e.target.value);
+      });
+      box.querySelector('#orthoLength').onchange = (e) => editOption(() => { o.lengthMode = e.target.value; });
+      const pickEdge = box.querySelector('#orthoPickEdge');
+      if (pickEdge) pickEdge.onclick = () => {
+        o.picking = o.picking === 'edge' ? null : 'edge'; o.preview = null; o.message = '';
+        showProps(el); draw();
+      };
+      box.querySelector('#orthoPickAnchor').onclick = () => {
+        o.picking = o.picking === 'anchor' ? null : 'anchor'; o.preview = null; o.message = '';
+        showProps(el); draw();
+      };
+      box.querySelector('#orthoCancel').onclick = () => { state.orthogonal = null; showProps(el); draw(); };
+      box.querySelector('#orthoPreview').onclick = () => {
+        o.preview = null; o.source = null; o.picking = null;
+        if (!Number.isInteger(o.anchorIndex) || !o.lengthMode ||
+            (o.scope === 'edge' && (!Number.isInteger(o.edgeIndex) || !o.axis))) {
+          o.message = '範囲・辺・向き・動かさない端や角・長さの扱いを選んでください。';
+        } else {
+          const points = G.polygonAbsPoints(el);
+          const options = { anchorIndex: o.anchorIndex, closed: kind === 'premise', preserveLength: o.lengthMode === 'keep' };
+          const result = o.scope === 'edge'
+            ? global.Orthogonal.adjustEdge(points, { ...options, edgeIndex: o.edgeIndex, axis: o.axis,
+              ...(o.direction && o.lengthMode === 'keep' ? { direction: Number(o.direction) } : {}) })
+            : global.Orthogonal.adjustAll(points, options);
+          if (result.ok) {
+            o.preview = result.points;
+            o.source = JSON.stringify(el);
+            o.message = '';
+          } else o.message = result.message || 'この条件では補正できません。別の条件を選んでください。';
+        }
+        showProps(el); draw();
+      };
+      const apply = box.querySelector('#orthoApply');
+      if (apply) apply.onclick = () => {
+        const current = M.findById(project, o.id);
+        if (!current || current.element !== el || state.selectedId !== o.id || JSON.stringify(el) !== o.source) {
+          o.preview = null; o.message = '図形が変更されたため、もう一度「補正後を確認」を押してください。';
+          showProps(current ? current.element : null); draw();
+          return;
+        }
+        flushHistory();
+        const xs = o.preview.map(p => p.x), ys = o.preview.map(p => p.y);
+        const minX = Math.min(...xs), minY = Math.min(...ys);
+        el.x = minX; el.y = minY;
+        el.w = Math.max(...xs) - minX; el.h = Math.max(...ys) - minY;
+        el.points = o.preview.map(p => ({ x: p.x - minX, y: p.y - minY }));
+        el.rotation = 0;
+        state.orthogonal = null;
+        recordHistory(); refresh(); showProps(el);
+      };
+    }
 
     // 入力途中の「4」等で腕を縮めないよう確定時に反映する。
     // 編集前の腕幅を引き継ぎ、他方の長さ・太さを意図せず変えない。
@@ -2201,27 +2351,6 @@
         };
       });
     }
-    const wallStraighten = box.querySelector('#btnWallStraighten') || box.querySelector('#btnLineStraighten');
-    if (wallStraighten) wallStraighten.onclick = () => {
-      // 各頂点を、直前の頂点から見て水平か垂直の近いほうへそろえる
-      const abs = G.polygonAbsPoints(el);
-      for (let i = 1; i < abs.length; i++) {
-        if (Math.abs(abs[i].x - abs[i - 1].x) >= Math.abs(abs[i].y - abs[i - 1].y)) {
-          abs[i] = { x: abs[i].x, y: abs[i - 1].y };
-        } else {
-          abs[i] = { x: abs[i - 1].x, y: abs[i].y };
-        }
-      }
-      // 左上を原点にして相対座標へ戻す(内壁の保存形式に合わせる)
-      const minX = Math.min(...abs.map((p) => p.x));
-      const minY = Math.min(...abs.map((p) => p.y));
-      el.x = minX; el.y = minY;
-      el.w = Math.max(...abs.map((p) => p.x)) - minX;
-      el.h = Math.max(...abs.map((p) => p.y)) - minY;
-      el.points = abs.map((p) => ({ x: p.x - minX, y: p.y - minY }));
-      el.rotation = 0; // 絶対座標で組み直したので回転はリセット
-      refresh(); showProps(el);
-    };
     const dupBtn = box.querySelector('#btnDup');
     if (dupBtn) dupBtn.onclick = duplicateSelected;
     const zButtons = [
