@@ -360,7 +360,7 @@
       if (!state.draft && ortho && ortho.picking && state.selectedId === ortho.id) {
         const found = global.Model.findById(project, ortho.id);
         if (!found) { state.orthogonal = null; onSelect(null); onChange(); return; }
-        const pts = global.Geometry.polygonAbsPoints(found.element);
+        const pts = global.Geometry.orthogonalPoints(found.element, found.kind);
         const screen = pts.map(q => global.Render.worldToScreen(q.x, q.y));
         if (ortho.picking === 'anchor') {
           const eligible = ortho.scope === 'edge' && Number.isInteger(ortho.edgeIndex)

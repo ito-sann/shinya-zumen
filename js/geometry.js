@@ -48,6 +48,14 @@
     });
   }
 
+  /* 水平・垂直補正で扱う図面上の頂点。寸法線は独立した2端点を持つ。 */
+  function orthogonalPoints(element, kind) {
+    if (kind === 'dimensions') {
+      return [{ x: element.x1, y: element.y1 }, { x: element.x2, y: element.y2 }];
+    }
+    return polygonAbsPoints(element);
+  }
+
   /* 定型L字カウンター。旧データの t は両腕共通・幅/奥行の小さい方が上限。
    * tTop/tSide を省略したときだけ、その従来の輪郭へフォールバックする。 */
   function counterLDimensions(f) {
@@ -782,7 +790,7 @@
     mmToM, fmtM, code, regionCalc, regionAreaSqm, regionRow, buildTable,
     isPillarRegion, areaUseForRegion, isPremisesAreaBoundary, hasPremisesAreaBoundary, hasAnyAreaBoundary,
     pointInRegion, pillarsInRegion, pillarDeductions, regionNetAreaSqm,
-    polygonAbsPoints, polygonCalc, polygonEdgesM, polygonPointsM,
+    polygonAbsPoints, orthogonalPoints, polygonCalc, polygonEdgesM, polygonPointsM,
     counterLDimensions, counterLPoints, counterLWorldPoints, normalizeCounterL, resizeCounterL,
     offsetPolygonAbs, offsetOpenPolylineAbs, wallOutlineAbs,
     premiseCenterlineAbs, premiseWallPolysAbs, premiseRegionLike, premiseCalc,

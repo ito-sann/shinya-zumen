@@ -2016,7 +2016,8 @@
     if (d.showLength) {
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       const off = Math.max(8, wpx(220));
-      ctx.font = `${fontPx(240, d)}px sans-serif`;
+      // 旧保存データでサイズ指定がない寸法も標準の8として描く。
+      ctx.font = `${fontPx(240, d.fontSize > 0 ? d : { fontSize: 8 })}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       // 文字が線で隠れないよう白フチを敷く
@@ -2119,7 +2120,7 @@
     if (!o || o.id !== state.selectedId) return;
     const found = global.Model.findById(project, o.id);
     if (!found) return;
-    const original = global.Geometry.polygonAbsPoints(found.element);
+    const original = global.Geometry.orthogonalPoints(found.element, found.kind);
     if (original.length < 2) return;
     const closed = found.kind === 'premise';
     const toScreen = pts => pts.map(p => worldToScreen(p.x, p.y));

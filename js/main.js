@@ -1512,7 +1512,8 @@
     if (!o || o.id !== el.id) {
       return '<button type="button" class="btn small" id="orthoOpen">水平・垂直に補正</button>';
     }
-    const count = (el.points || []).length;
+    const isDimension = kind === 'dimensions';
+    const count = G.orthogonalPoints(el, kind).length;
     const closed = kind === 'premise';
     const edgeCount = closed ? count : count - 1;
     const selected = (value, current) => String(value) === String(current) ? ' selected' : '';
@@ -1521,9 +1522,10 @@
     let candidates = Array.from({ length: count }, (_, i) => i);
     if (o.scope === 'edge') candidates = Number.isInteger(o.edgeIndex) ? [o.edgeIndex, (o.edgeIndex + 1) % count] : [];
     const anchors = candidates.map(i => `<option value="${i}"${selected(i, o.anchorIndex)}>P${i + 1}</option>`).join('');
-    const edgeControl = o.scope === 'edge' ? `<label class="field">補正する辺
+    const edgeSelector = isDimension ? '' : `<label class="field">補正する辺
       <select id="orthoEdge"><option value="">選んでください</option>${edges}</select></label>
-      <button type="button" class="btn small" id="orthoPickEdge">${o.picking === 'edge' ? '図面の辺をクリックしてください' : '図面で辺を選ぶ'}</button>
+      <button type="button" class="btn small" id="orthoPickEdge">${o.picking === 'edge' ? '図面の辺をクリックしてください' : '図面で辺を選ぶ'}</button>`;
+    const edgeControl = o.scope === 'edge' ? `${edgeSelector}
       <label class="field">補正する向き<select id="orthoAxis"><option value="">選んでください</option>
       <option value="horizontal"${selected('horizontal', o.axis)}>水平</option>
       <option value="vertical"${selected('vertical', o.axis)}>垂直</option></select></label>
@@ -1533,17 +1535,19 @@
         <option value="-1"${selected('-1', o.direction)}>${o.axis === 'horizontal' ? '左向き' : '上向き'}</option>
         </select></label>` : ''}` :
       '<p class="ortho-help">全体は各辺を、元の向きに近い水平または垂直に整えます。</p>';
-    return `<div class="ortho-panel"><strong>水平・垂直に補正</strong>
+    const scopeControl = isDimension ? '' : `
       <label class="field">補正する範囲<select id="orthoScope">
       <option value="edge"${selected('edge', o.scope)}>1辺だけ</option>
-      <option value="all"${selected('all', o.scope)}>全体</option></select></label>
+      <option value="all"${selected('all', o.scope)}>全体</option></select></label>`;
+    return `<div class="ortho-panel"><strong>水平・垂直に補正</strong>
+      ${scopeControl}
       ${edgeControl}
       <label class="field">動かさない端・角<select id="orthoAnchor"><option value="">選んでください</option>${anchors}</select></label>
       <button type="button" class="btn small" id="orthoPickAnchor" ${!candidates.length ? 'disabled' : ''}>${o.picking === 'anchor' ? '図面の端・角をクリックしてください' : '図面で端・角を選ぶ'}</button>
       <label class="field">長さの扱い<select id="orthoLength"><option value="">選んでください</option>
       <option value="keep"${selected('keep', o.lengthMode)}>長さを保つ</option>
       <option value="change"${selected('change', o.lengthMode)}>長さが変わってもよい</option></select></label>
-      <p class="ortho-help">つながる辺の長さや傾きも変わることがあります。P番号は図面上に表示します。</p>
+      <p class="ortho-help">${isDimension ? 'P1は始点、P2は終点です。P番号は図面上に表示します。' : 'つながる辺の長さや傾きも変わることがあります。P番号は図面上に表示します。'}</p>
       ${o.message ? `<p class="ortho-message" role="status">${esc(o.message)}</p>` : ''}
       <button type="button" class="btn small" id="orthoPreview">補正後を確認</button>
       ${o.preview ? '<p class="ortho-help">青い点線が補正後の形です。図面はまだ変更されていません。</p><button type="button" class="btn primary small" id="orthoApply">この内容で適用</button>' : ''}
@@ -1676,12 +1680,13 @@
     // ラベルを持つ要素は文字サイズを個別に調整できる。
     // Googleドキュメント風のサイズ番号(15=標準)で、−/＋は段階リストを移動する。
     if (kind === 'regions' || kind === 'furniture' || kind === 'fittings' || kind === 'notes' || kind === 'dimensions') {
-      const curSize = el.fontSize > 0 ? el.fontSize : 15;
+      const defaultSize = kind === 'dimensions' ? 8 : 15;
+      const curSize = el.fontSize > 0 ? el.fontSize : defaultSize;
       html += `<div class="prop-row"><span>文字サイズ</span>
         <span class="font-ctrl">
           <button type="button" id="fontMinus" class="btn small">−</button>
           <input type="number" id="fontInput" step="1" min="6" max="96"
-                 value="${curSize}" title="サイズ(15=標準)">
+                 value="${curSize}" title="サイズ(${defaultSize}=標準)">
           <button type="button" id="fontPlus" class="btn small">＋</button>
           <button type="button" id="fontAuto" class="btn small">標準</button>
         </span></div>`;
@@ -1706,13 +1711,12 @@
       html += '</div></div>';
       html += propNum('始点X(mm)', 'x1', el.x1) + propNum('始点Y(mm)', 'y1', el.y1);
       html += propNum('終点X(mm)', 'x2', el.x2) + propNum('終点Y(mm)', 'y2', el.y2);
-      html += `<div class="add-row"><button class="btn small" id="btnDimStraighten">水平/垂直に補正</button></div>`;
-      html += '<p class="muted">押すと、傾きに近いほう(水平か垂直)のまっすぐな線に直します(用紙枠と平行になります)。両端の□はキャンバス上でドラッグでも動かせます。</p>';
+      html += '<p class="muted">両端の□はキャンバス上でドラッグでも動かせます。</p>';
     } else {
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
     }
-    if (['lines', 'walls', 'premise'].includes(kind) && (el.points || []).length >= 2) {
+    if (['lines', 'walls', 'premise', 'dimensions'].includes(kind) && G.orthogonalPoints(el, kind).length >= 2) {
       html += orthogonalPanel(el, kind);
     }
     if (kind === 'notes') {
@@ -1934,7 +1938,7 @@
         return;
       }
       state.orthogonal = { id: el.id, kind, scope: 'edge',
-        edgeIndex: el.points.length === 2 ? 0 : null, anchorIndex: null,
+        edgeIndex: G.orthogonalPoints(el, kind).length === 2 ? 0 : null, anchorIndex: null,
         axis: '', direction: '', lengthMode: '', preview: null, message: '', picking: null };
       showProps(el); draw();
     };
@@ -1944,9 +1948,10 @@
         fn(); o.preview = null; o.source = null; o.message = ''; o.picking = null;
         showProps(el); draw();
       };
-      box.querySelector('#orthoScope').onchange = (e) => editOption(() => {
+      const scopeSelect = box.querySelector('#orthoScope');
+      if (scopeSelect) scopeSelect.onchange = (e) => editOption(() => {
         o.scope = e.target.value; o.anchorIndex = null;
-        if (o.scope === 'edge' && el.points.length === 2) o.edgeIndex = 0;
+        if (o.scope === 'edge' && G.orthogonalPoints(el, kind).length === 2) o.edgeIndex = 0;
       });
       const edgeSelect = box.querySelector('#orthoEdge');
       if (edgeSelect) edgeSelect.onchange = (e) => editOption(() => {
@@ -1977,7 +1982,7 @@
             (o.scope === 'edge' && (!Number.isInteger(o.edgeIndex) || !o.axis))) {
           o.message = '範囲・辺・向き・動かさない端や角・長さの扱いを選んでください。';
         } else {
-          const points = G.polygonAbsPoints(el);
+          const points = G.orthogonalPoints(el, kind);
           const options = { anchorIndex: o.anchorIndex, closed: kind === 'premise', preserveLength: o.lengthMode === 'keep' };
           const result = o.scope === 'edge'
             ? global.Orthogonal.adjustEdge(points, { ...options, edgeIndex: o.edgeIndex, axis: o.axis,
@@ -2000,12 +2005,17 @@
           return;
         }
         flushHistory();
-        const xs = o.preview.map(p => p.x), ys = o.preview.map(p => p.y);
-        const minX = Math.min(...xs), minY = Math.min(...ys);
-        el.x = minX; el.y = minY;
-        el.w = Math.max(...xs) - minX; el.h = Math.max(...ys) - minY;
-        el.points = o.preview.map(p => ({ x: p.x - minX, y: p.y - minY }));
-        el.rotation = 0;
+        if (kind === 'dimensions') {
+          el.x1 = o.preview[0].x; el.y1 = o.preview[0].y;
+          el.x2 = o.preview[1].x; el.y2 = o.preview[1].y;
+        } else {
+          const xs = o.preview.map(p => p.x), ys = o.preview.map(p => p.y);
+          const minX = Math.min(...xs), minY = Math.min(...ys);
+          el.x = minX; el.y = minY;
+          el.w = Math.max(...xs) - minX; el.h = Math.max(...ys) - minY;
+          el.points = o.preview.map(p => ({ x: p.x - minX, y: p.y - minY }));
+          el.rotation = 0;
+        }
         state.orthogonal = null;
         recordHistory(); refresh(); showProps(el);
       };
@@ -2137,7 +2147,8 @@
     const fontInput = box.querySelector('#fontInput');
     if (fontInput) {
       const STEPS = [8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
-      const current = () => (el.fontSize > 0 ? el.fontSize : 15);
+      const defaultSize = kind === 'dimensions' ? 8 : 15;
+      const current = () => (el.fontSize > 0 ? el.fontSize : defaultSize);
       const apply = (s) => {
         el.fontSize = Math.min(96, Math.max(6, Math.round(s)));
         fontInput.value = el.fontSize;
@@ -2153,7 +2164,7 @@
         const bigger = STEPS.find((s) => s > c);
         apply(bigger != null ? bigger : c);
       };
-      box.querySelector('#fontAuto').onclick = () => apply(15);
+      box.querySelector('#fontAuto').onclick = () => apply(defaultSize);
       // 入力中は値を書き戻さない(タイプの邪魔をしない)。確定時にだけ丸める。
       fontInput.addEventListener('input', (e) => {
         const v = parseFloat(e.target.value);
@@ -2368,18 +2379,6 @@
         };
       });
     }
-    // 水平/垂直に補正: 傾きに近いほうの軸へまっすぐに直す(用紙枠と平行になる)
-    const dimStraighten = box.querySelector('#btnDimStraighten');
-    if (dimStraighten) dimStraighten.onclick = () => {
-      if (Math.abs(el.x2 - el.x1) >= Math.abs(el.y2 - el.y1)) {
-        const ym = Math.round((el.y1 + el.y2) / 2);
-        el.y1 = ym; el.y2 = ym; // 水平へ(高さは両端の中間に合わせる)
-      } else {
-        const xm = Math.round((el.x1 + el.x2) / 2);
-        el.x1 = xm; el.x2 = xm; // 垂直へ
-      }
-      refresh(); showProps(el);
-    };
     // 線種・線色・表示図面(自由な線)
     const lineStyleSel = box.querySelector('#propLineStyle');
     if (lineStyleSel) lineStyleSel.onchange = (e) => { el.lineStyle = e.target.value; refresh(); };

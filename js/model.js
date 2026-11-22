@@ -753,6 +753,7 @@
       layer: layer || 'kyuseki',
       layers: [layer || 'kyuseki'], // 既定では求積図だけに表示(平面図には出さない)
       showLength: false, // 既定では長さの数値は図面に表示しない
+      fontSize: 8, // 寸法の長さは小さめを標準にする
     };
     project.dimensions = project.dimensions || [];
     project.dimensions.push(dim);
