@@ -683,18 +683,18 @@
     if (g.kind === 'wall') {
       ctx.fillStyle = sel ? 'rgba(211,47,47,.85)' : '#546e7a';
       ctx.fillRect(-w / 2, -h / 2, w, h);
-    } else if (g.kind === 'pillar') {
-      // 柱は塗りつぶさず、枠の中心に名前を黒字で表示する。
+    } else if (g.kind === 'pillar' || g.kind === 'cupboard') {
+      // 柱と食器棚は塗りつぶさず、枠の中心に名前を黒字で表示する。
       ctx.strokeStyle = sel ? '#d32f2f' : '#000000';
       ctx.strokeRect(-w / 2, -h / 2, w, h);
       ctx.fillStyle = '#000000';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const label = g.label || '柱';
+      const label = g.label || (g.kind === 'pillar' ? '柱' : '食器棚');
       const rot = (g.rotation || 0) * Math.PI / 180;
       const size = fontPx(180, g);
       ctx.font = `${size}px sans-serif`;
-      // 細い柱や回転した柱でも文字が枠からはみ出しにくいようにする。
+      // 細い形や回転した形でも文字が枠からはみ出しにくいようにする。
       const textWidth = ctx.measureText(label).width || size;
       const cos = Math.abs(Math.cos(rot)), sin = Math.abs(Math.sin(rot));
       const fit = Math.min(1, Math.abs(w) * 0.8 / (textWidth * cos + size * sin),

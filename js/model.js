@@ -280,6 +280,7 @@
     curtain:     { label: 'カーテン',   w: 1800, h: 80,  category: 'fitting' },
     wall:        { label: '壁',         w: 2000, h: 120, category: 'fitting' },
     pillar:      { label: '柱',         w: 300,  h: 300, category: 'fitting' },
+    cupboard:    { label: '食器棚',     w: 900,  h: 450, category: 'fitting' },
     toilet:      { label: '洋式便器',   w: 430,  h: 800, category: 'equipment' },
     toiletJp:    { label: '和式便器',   w: 400,  h: 650, category: 'equipment' },
     urinal:      { label: '男性用小便器', w: 350, h: 400, category: 'equipment' },

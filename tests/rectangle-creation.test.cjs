@@ -149,3 +149,49 @@ test('a pillar has an unfilled outline and a centered black label on screen and 
     assert.deepEqual([label.x, label.y, label.color, label.align, label.baseline], [0, 0, '#000000', 'center', 'middle']);
   }
 });
+
+test('a cupboard is available as a fitting and retains edited dimensions and label', () => {
+  const project = M.defaultProject();
+  project.regions = [];
+  project.meta.showPaperFrame = false;
+  project.meta.showNorthMark = false;
+  assert.equal(M.FITTING_CATALOG.cupboard.category, 'fitting');
+  const cupboard = M.addFitting(project, 'cupboard');
+  assert.equal(cupboard.label, '食器棚');
+  assert.deepEqual([cupboard.w, cupboard.h], [900, 450]);
+  cupboard.w = 1600;
+  cupboard.h = 600;
+  cupboard.rotation = 90;
+  const loaded = M.deserialize(M.serialize(project));
+  const saved = M.findById(loaded, cupboard.id).element;
+  assert.equal(saved.kind, 'cupboard');
+  assert.deepEqual([saved.w, saved.h, saved.rotation, saved.label], [1600, 600, 90, '食器棚']);
+  assert.deepEqual(plain(saved.layers), ['plan', 'kyuseki']);
+
+  R.view.zoom = 0.1;
+  R.setLayer('plan');
+  for (const print of [false, true]) {
+    const events = [];
+    const base = {};
+    const ctx = new Proxy(base, {
+      get(obj, key) {
+        if (key === 'measureText') return value => ({ width: String(value).length * parseFloat(obj.font) });
+        if (key === 'fillRect' || key === 'strokeRect') return (...args) => events.push({ type: key, args, color: key === 'fillRect' ? obj.fillStyle : obj.strokeStyle });
+        if (key === 'fillText') return (value, x, y) => events.push({ type: 'text', value, x, y, color: obj.fillStyle, align: obj.textAlign, baseline: obj.textBaseline });
+        return key in obj ? obj[key] : () => {};
+      },
+      set(obj, key, value) { obj[key] = value; return true; },
+    });
+    R.render(ctx, { width: 800, height: 600 }, loaded, { selectedId: null }, { print });
+    const outline = events.find(e => e.type === 'strokeRect' && e.args[2] === 160 && e.args[3] === 60);
+    assert.ok(outline, 'cupboard outline is drawn');
+    assert.equal(outline.color, '#000000');
+    assert.ok(!events.some(e => e.type === 'fillRect' && e.args[2] === 160 && e.args[3] === 60), 'cupboard has no fill');
+    const label = events.find(e => e.type === 'text' && e.value === '食器棚');
+    assert.ok(label, 'cupboard label is drawn');
+    assert.deepEqual([label.x, label.y, label.color, label.align, label.baseline], [0, 0, '#000000', 'center', 'middle']);
+  }
+  saved.label = '収納棚';
+  const reloaded = M.deserialize(M.serialize(loaded));
+  assert.equal(M.findById(reloaded, cupboard.id).element.label, '収納棚');
+});

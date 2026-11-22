@@ -149,6 +149,34 @@ test('one-click alignment also handles rotated two-point lines and walls without
   }
 });
 
+test('a saved rotated wall is drawn, selected and corrected at the same positions', () => {
+  const project = projectWithoutSamples();
+  const wall = Model.addPolygonWall(project, [point(1000, 1000), point(4000, 1000)], 120);
+  wall.rotation = 90;
+  const loaded = Model.deserialize(Model.serialize(project));
+  const savedWall = Model.findById(loaded, wall.id).element;
+  const points = Geometry.orthogonalPoints(savedWall, 'walls');
+  const outline = Geometry.wallOutlineAbs(savedWall);
+  const bounds = Geometry.boundingBox(loaded);
+  assert.ok(Math.abs(points[0].x - points[1].x) < 1e-7, 'the rotated wall is vertical');
+  for (let i = 0; i < 2; i++) {
+    const left = outline.left[i], right = outline.right[i];
+    assert.ok(Math.abs((left.x + right.x) / 2 - points[i].x) < 1e-7);
+    assert.ok(Math.abs((left.y + right.y) / 2 - points[i].y) < 1e-7);
+    assert.ok(Math.abs(Math.hypot(left.x - right.x, left.y - right.y) - 120) < 1e-7);
+    for (const p of [left, right]) {
+      assert.ok(p.x >= bounds.x - 1e-7 && p.x <= bounds.x + bounds.w + 1e-7);
+      assert.ok(p.y >= bounds.y - 1e-7 && p.y <= bounds.y + bounds.h + 1e-7);
+    }
+  }
+  const result = Orthogonal.autoAlignTwoPoints(points);
+  assert.ok(result.ok);
+  assert.equal(result.axis, 'vertical');
+  for (let i = 0; i < 2; i++) {
+    assert.ok(Math.hypot(result.points[i].x - points[i].x, result.points[i].y - points[i].y) < 1e-7);
+  }
+});
+
 test('picking a dimension endpoint on the canvas selects it without dragging or changing data', () => {
   const project = projectWithoutSamples();
   const dimension = Model.addDimension(project, 1000, 1000, 4000, 5000, 'plan');

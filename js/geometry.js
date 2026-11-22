@@ -491,7 +491,8 @@
    * 平面図には塗りつぶさず、この2本の線だけを描く(建築図面の壁の二重線表現)。
    * 求積には使わない。 */
   function wallOutlineAbs(wall) {
-    const abs = (wall.points || []).map((p) => ({ x: wall.x + p.x, y: wall.y + p.y }));
+    // 回転済みの壁も、選択・補正で使う点と同じ位置に描く。
+    const abs = polygonAbsPoints(wall);
     const t = wall.thickness || 0;
     return {
       left: offsetOpenPolylineAbs(abs, t / 2),
@@ -757,7 +758,15 @@
     }
     for (const w of (project.walls || [])) {
       const t = (w.thickness || 0) / 2;
-      consider(w.x - t, w.y - t); consider(w.x + w.w + t, w.y + w.h + t);
+      const points = polygonAbsPoints(w);
+      if (!points.length) {
+        consider(w.x - t, w.y - t); consider(w.x + w.w + t, w.y + w.h + t);
+      } else {
+        // 壁の回転と角の突き出しを含めて、全体表示や印刷で切れないようにする。
+        for (const p of points) { consider(p.x - t, p.y - t); consider(p.x + t, p.y + t); }
+        const outline = wallOutlineAbs(w);
+        for (const p of [...outline.left, ...outline.right]) consider(p.x, p.y);
+      }
     }
     for (const f of project.furniture) {
       consider(f.x, f.y); consider(f.x + f.w, f.y + f.h);

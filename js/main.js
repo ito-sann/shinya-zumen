@@ -1523,13 +1523,14 @@
 
   function orthogonalPanel(el, kind) {
     const o = state.orthogonal;
+    const count = G.orthogonalPoints(el, kind).length;
+    // 2点なら補正する辺は1つだけなので、寸法線と同じ操作にする。
+    const singleEdge = kind === 'dimensions' || (['walls', 'lines'].includes(kind) && count === 2);
     if (!o || o.id !== el.id) {
-      return kind === 'dimensions'
+      return singleEdge
         ? '<button type="button" class="btn small" id="orthoOpen">詳細設定で補正</button>'
         : '<button type="button" class="btn small" id="orthoOpen">水平・垂直に補正</button>';
     }
-    const isDimension = kind === 'dimensions';
-    const count = G.orthogonalPoints(el, kind).length;
     const closed = kind === 'premise';
     const edgeCount = closed ? count : count - 1;
     const selected = (value, current) => String(value) === String(current) ? ' selected' : '';
@@ -1538,7 +1539,7 @@
     let candidates = Array.from({ length: count }, (_, i) => i);
     if (o.scope === 'edge') candidates = Number.isInteger(o.edgeIndex) ? [o.edgeIndex, (o.edgeIndex + 1) % count] : [];
     const anchors = candidates.map(i => `<option value="${i}"${selected(i, o.anchorIndex)}>P${i + 1}</option>`).join('');
-    const edgeSelector = isDimension ? '' : `<label class="field">補正する辺
+    const edgeSelector = singleEdge ? '' : `<label class="field">補正する辺
       <select id="orthoEdge"><option value="">選んでください</option>${edges}</select></label>
       <button type="button" class="btn small" id="orthoPickEdge">${o.picking === 'edge' ? '図面の辺をクリックしてください' : '図面で辺を選ぶ'}</button>`;
     const edgeControl = o.scope === 'edge' ? `${edgeSelector}
@@ -1551,7 +1552,7 @@
         <option value="-1"${selected('-1', o.direction)}>${o.axis === 'horizontal' ? '左向き' : '上向き'}</option>
         </select></label>` : ''}` :
       '<p class="ortho-help">全体は各辺を、元の向きに近い水平または垂直に整えます。</p>';
-    const scopeControl = isDimension ? '' : `
+    const scopeControl = singleEdge ? '' : `
       <label class="field">補正する範囲<select id="orthoScope">
       <option value="edge"${selected('edge', o.scope)}>1辺だけ</option>
       <option value="all"${selected('all', o.scope)}>全体</option></select></label>`;
@@ -1563,7 +1564,7 @@
       <label class="field">長さの扱い<select id="orthoLength"><option value="">選んでください</option>
       <option value="keep"${selected('keep', o.lengthMode)}>長さを保つ</option>
       <option value="change"${selected('change', o.lengthMode)}>長さが変わってもよい</option></select></label>
-      <p class="ortho-help">${isDimension ? 'P1は始点、P2は終点です。P番号は図面上に表示します。' : 'つながる辺の長さや傾きも変わることがあります。P番号は図面上に表示します。'}</p>
+      <p class="ortho-help">${singleEdge ? 'P1は始点、P2は終点です。P番号は図面上に表示します。' : 'つながる辺の長さや傾きも変わることがあります。P番号は図面上に表示します。'}</p>
       ${o.message ? `<p class="ortho-message" role="status">${esc(o.message)}</p>` : ''}
       <button type="button" class="btn small" id="orthoPreview">補正後を確認</button>
       ${o.preview ? '<p class="ortho-help">青い点線が補正後の形です。図面はまだ変更されていません。</p><button type="button" class="btn primary small" id="orthoApply">この内容で適用</button>' : ''}
@@ -1732,7 +1733,13 @@
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
     }
-    if (['dimensions', 'walls', 'lines'].includes(kind) && G.orthogonalPoints(el, kind).length === 2) {
+    const alignmentPoints = ['dimensions', 'walls', 'lines'].includes(kind) ? G.orthogonalPoints(el, kind) : [];
+    if (alignmentPoints.length === 2) {
+      if (kind !== 'dimensions') {
+        const [a, b] = alignmentPoints;
+        const lenM = G.mmToM(Math.hypot(b.x - a.x, b.y - a.y));
+        html += `<div class="prop-row"><span>長さ</span><b id="propTwoPointLen">${lenM.toFixed(2)} m</b></div>`;
+      }
       html += '<button type="button" class="btn small" id="btnAutoAlignTwoPoints">補正する（自動）</button>';
       html += '<p class="muted">長さと中心を保ち、用紙に対して近い水平または垂直にします。</p>';
     }
@@ -1776,7 +1783,7 @@
         html += '<p class="muted">長さは外端から外端まで。横・縦は回転前の向きです。Shiftを押しながらドラッグすると、移動の単位に吸着せず調整できます。</p>';
         html += `<label class="check-row"><input type="checkbox" data-fieldbool="mirrorL" ${el.mirrorL ? 'checked' : ''}> L字の突起を左右反転</label>`;
       } else {
-        if (kind === 'fittings' && el.kind === 'pillar') {
+        if (kind === 'fittings' && ['pillar', 'cupboard'].includes(el.kind)) {
           html += propNum('横の長さ(mm)', 'w', el.w);
           html += propNum('縦の長さ(mm)', 'h', el.h);
         } else {
@@ -2317,7 +2324,46 @@
         el.points[i].x = (cx + dx * cos - dy * sin) - el.x;
         el.points[i].y = (cy + dx * sin + dy * cos) - el.y;
         M.normalizePolygon(el);
-        refresh(); showProps(el);
+        if (['walls', 'lines'].includes(kind) && el.points.length === 2) {
+          // change は入力欄からボタンへフォーカスが移る途中で発火する。
+          // ここで欄全体を作り直すと押したボタンが消え、クリックが届かない。
+          const o = state.orthogonal && state.orthogonal.id === el.id ? state.orthogonal : null;
+          if (o && o.preview) {
+            o.preview = null; o.source = null;
+            o.message = '図形が変更されたため、もう一度「補正後を確認」を押してください。';
+            const apply = box.querySelector('#orthoApply');
+            if (apply) {
+              const help = apply.previousElementSibling;
+              if (help && help.classList.contains('ortho-help')) help.remove();
+              apply.remove();
+            }
+            let message = box.querySelector('.ortho-message');
+            if (!message) {
+              message = document.createElement('p');
+              message.className = 'ortho-message';
+              message.setAttribute('role', 'status');
+              const preview = box.querySelector('#orthoPreview');
+              if (preview) preview.before(message);
+            }
+            message.textContent = o.message;
+          }
+          refresh();
+          const points = G.polygonAbsPoints(el);
+          const xInput = box.querySelector('[data-field="x"]');
+          const yInput = box.querySelector('[data-field="y"]');
+          if (xInput) xInput.value = el.x;
+          if (yInput) yInput.value = el.y;
+          points.forEach((p, index) => {
+            const x = box.querySelector(`[data-vx="${index}"]`);
+            const y = box.querySelector(`[data-vy="${index}"]`);
+            if (x) x.value = Math.round(p.x);
+            if (y) y.value = Math.round(p.y);
+          });
+          const length = box.querySelector('#propTwoPointLen');
+          if (length) length.textContent = G.mmToM(Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)).toFixed(2) + ' m';
+        } else {
+          refresh(); showProps(el);
+        }
       });
     });
     // メモの矢印(引き出し線)の有無を切り替える。付け直すときは先端を本体の近くに戻す
