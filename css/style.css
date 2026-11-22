@@ -69,6 +69,13 @@ body {
 }
 textarea { resize: vertical; font-family: inherit; }
 select, .btn.small { margin-top: 0; }
+.rectangle-controls {
+  margin-top: 12px; padding: 10px; border: 1px solid #e2e8f0;
+  border-radius: 7px; background: #f8fafc;
+}
+.rectangle-controls h4 { margin: 0 0 8px; font-size: 12px; color: #334155; }
+.rectangle-controls .size-row label { min-width: 0; }
+.rectangle-help { margin: 7px 0 0; color: #64748b; font-size: 12px; line-height: 1.5; }
 
 /* ---- キャンバス ---- */
 .canvas-wrap { flex: 1; position: relative; min-width: 0; background: #f8fafc; }

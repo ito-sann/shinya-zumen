@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.87.9">
+  <link rel="stylesheet" href="css/style.css?v=1.87.10">
 </head>
 <body>
   <header class="topbar">
@@ -68,6 +68,15 @@
         </div>
         <button id="btnDrawPoly" class="btn block">多角形で描く</button>
         <p class="muted">客室・営業所などの範囲を示す囲い線です。キャンバス上で角をクリックして囲います(最初の点をクリック・ダブルクリック・Enterで確定)。面積計算には入りません。色・線種・表示する図面(平面図/求積図/照明・音響設備図)はあとから「選択中の要素」で変えられます。</p>
+        <div class="rectangle-controls" role="group" aria-labelledby="rectBoundaryTitle">
+          <h4 id="rectBoundaryTitle">寸法を入力して長方形を作成</h4>
+          <div class="size-row">
+            <label>横の長さ (mm)<input type="number" id="rectBoundaryWidth" value="4000" min="0.001" step="any" inputmode="decimal"></label>
+            <label>縦の長さ (mm)<input type="number" id="rectBoundaryHeight" value="3000" min="0.001" step="any" inputmode="decimal"></label>
+          </div>
+          <button type="button" id="btnRectBoundary" class="btn block">長方形の囲い線を作成</button>
+          <p class="rectangle-help">線色・線種は上で選んだ設定を使います。面積計算には入りません。図面のm表示は1cm単位に丸めます。</p>
+        </div>
         <!-- 旧「区画を追加」の入力欄(仕組み残置のため非表示)。過去の案件の区画は今まで通り表示・編集できる -->
         <div style="display:none">
           <select id="regionType"></select>
@@ -98,6 +107,15 @@
               <option value="center">壁芯の寸法</option>
             </select>
           </label>
+        </div>
+        <div class="rectangle-controls" role="group" aria-labelledby="rectPremiseTitle">
+          <h4 id="rectPremiseTitle">寸法を入力して長方形の外周を作成</h4>
+          <div class="size-row">
+            <label>内側の横幅 (mm)<input type="number" id="rectPremiseWidth" value="4000" min="0.001" step="any" inputmode="decimal"></label>
+            <label>内側の縦幅 (mm)<input type="number" id="rectPremiseHeight" value="3000" min="0.001" step="any" inputmode="decimal"></label>
+          </div>
+          <button type="button" id="btnRectPremise" class="btn block">長方形の外周を作成</button>
+          <p class="rectangle-help">寸法は壁の内側の長さです。上で指定した壁厚が外側に加わります。この長方形は、上の「測り方」にかかわらず内側の寸法で作成します。図面のm表示と求積は1cm単位に丸めます。</p>
         </div>
         <!-- 営業所求積の方式(座標法など)は自動求積とセットの機能のため、手入力の求積表への移行に伴い非表示(仕組みは残置) -->
         <label class="field" style="display:none">営業所求積の方式
@@ -357,14 +375,14 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.87.9"></script>
-  <script src="js/geometry.js?v=1.87.9"></script>
-  <script src="js/orthogonal.js?v=1.87.9"></script>
-  <script src="js/render.js?v=1.87.9"></script>
-  <script src="js/interactions.js?v=1.87.9"></script>
-  <script src="js/print.js?v=1.87.9"></script>
-  <script src="js/forms.js?v=1.87.9"></script>
-  <script src="js/main.js?v=1.87.9"></script>
+  <script src="js/model.js?v=1.87.10"></script>
+  <script src="js/geometry.js?v=1.87.10"></script>
+  <script src="js/orthogonal.js?v=1.87.10"></script>
+  <script src="js/render.js?v=1.87.10"></script>
+  <script src="js/interactions.js?v=1.87.10"></script>
+  <script src="js/print.js?v=1.87.10"></script>
+  <script src="js/forms.js?v=1.87.10"></script>
+  <script src="js/main.js?v=1.87.10"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;

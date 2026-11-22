@@ -497,6 +497,58 @@
     $('regionShape').onchange = (e) => {
       $('regionW2Row').style.display = e.target.value === 'trapezoid' ? '' : 'none';
     };
+    // 数値から作る長方形は、入力した寸法を丸めずそのまま使う。
+    const readRectangleSize = (widthId, heightId) => {
+      const wText = $(widthId).value.trim(), hText = $(heightId).value.trim();
+      const w = Number(wText), h = Number(hText);
+      if (!wText || !hText || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+        alert('幅と高さに、0より大きい数値をmm単位で入力してください。');
+        return null;
+      }
+      return { w, h };
+    };
+    const canCreateRectangle = () => {
+      if (state.draft || state.measure) {
+        alert('作図中の操作を終了してから、長方形を作成してください。');
+        return false;
+      }
+      return true;
+    };
+    $('btnRectBoundary').onclick = () => {
+      if (!canCreateRectangle()) return;
+      const size = readRectangleSize('rectBoundaryWidth', 'rectBoundaryHeight');
+      if (!size) return;
+      if (!['plan', 'kyuseki', 'lighting'].includes(R.getLayer())) { R.setLayer('plan'); buildLayerTabs(); }
+      flushHistory();
+      const r = M.addRegion(project, 'other', size.w, size.h, 'rect');
+      r.label = '囲い線';
+      r.areaUse = 'display';
+      r.boundaryColor = $('regionLineColor').value || undefined;
+      r.boundaryLineStyle = $('regionLineStyle').value || 'solid';
+      r.layers = R.getLayer() === 'lighting' ? ['lighting'] : ['plan', 'kyuseki'];
+      placeAtViewCenter(r);
+      state.selectedId = r.id;
+      recordHistory(); refresh(); showProps(r);
+    };
+    $('btnRectPremise').onclick = () => {
+      if (!canCreateRectangle()) return;
+      const size = readRectangleSize('rectPremiseWidth', 'rectPremiseHeight');
+      if (!size) return;
+      const thicknessText = $('premWall').value.trim();
+      const thickness = Number(thicknessText);
+      if (!thicknessText || !Number.isInteger(thickness) || thickness < 10 || thickness > 2147483647) {
+        alert('壁厚には、10mm以上の整数を入力してください。');
+        return;
+      }
+      if (R.getLayer() !== 'plan' && R.getLayer() !== 'kyuseki') { R.setLayer('plan'); buildLayerTabs(); }
+      flushHistory();
+      const pr = M.addPremise(project,
+        [{ x: 0, y: 0 }, { x: size.w, y: 0 }, { x: size.w, y: size.h }, { x: 0, y: size.h }],
+        thickness, 'inner');
+      placeAtViewCenter(pr);
+      state.selectedId = pr.id;
+      recordHistory(); refresh(); showProps(pr);
+    };
     // 囲い線の作図モード(クリックで頂点を置いて囲う)。
     // 面積計算には入れない「表示だけの線」として作る(区画の仕組みを流用)。
     // 作図中にもう一度押すと: 3点以上なら確定、未満なら中止。
