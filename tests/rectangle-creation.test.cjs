@@ -195,3 +195,40 @@ test('a cupboard is available as a fitting and retains edited dimensions and lab
   const reloaded = M.deserialize(M.serialize(loaded));
   assert.equal(M.findById(reloaded, cupboard.id).element.label, '収納棚');
 });
+
+test('1/35 scale survives saving and sets the paper frame and PDF scale bar', () => {
+  const project = M.defaultProject();
+  project.meta.scale = 35;
+  project.meta.paper = 'A4';
+  project.meta.orientation = 'landscape';
+  const loaded = M.deserialize(M.serialize(project));
+  assert.equal(loaded.meta.scale, 35);
+  assert.deepEqual(plain(R.paperFrameWorld(loaded)), { x: 0, y: 0, w: 10395, h: 7350 });
+  loaded.meta.orientation = 'portrait';
+  assert.deepEqual(plain(R.paperFrameWorld(loaded)), { x: 0, y: 0, w: 7350, h: 10395 });
+  loaded.meta.orientation = 'landscape';
+
+  let html = '', rendered;
+  const view = { zoom: 0.05, offsetX: 12, offsetY: 34 };
+  let layer = 'plan';
+  const render = {
+    LAYERS: R.LAYERS, view,
+    getLayer: () => layer,
+    setLayer: value => { layer = value; },
+    paperFrameWorld: R.paperFrameWorld,
+    render: (_ctx, canvas, p, _state, options) => {
+      rendered = { width: canvas.width, zoom: view.zoom, scale: p.meta.scale, print: options.print };
+    },
+  };
+  const win = { Model: M, Render: render,
+    open: () => ({ document: { write: value => { html = value; }, close() {} } }) };
+  const doc = { createElement: () => ({ getContext: () => ({}), toDataURL: () => 'data:image/png;base64,AA==' }) };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/print.js'), 'utf8'), { window: win, document: doc });
+  win.Printer.printCurrent(loaded);
+  assert.equal(rendered.scale, 35);
+  assert.equal(rendered.print, true);
+  assert.ok(Math.abs(rendered.width / rendered.zoom - 10395) < 1e-7);
+  assert.match(html, /aria-label="縮尺 1\/35"/);
+  assert.match(html, /frame-scale-bar" style="width:28\.57mm/);
+  assert.deepEqual(view, { zoom: 0.05, offsetX: 12, offsetY: 34 });
+});
