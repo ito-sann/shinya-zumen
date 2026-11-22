@@ -1510,7 +1510,9 @@
   function orthogonalPanel(el, kind) {
     const o = state.orthogonal;
     if (!o || o.id !== el.id) {
-      return '<button type="button" class="btn small" id="orthoOpen">水平・垂直に補正</button>';
+      return kind === 'dimensions'
+        ? '<button type="button" class="btn small" id="orthoOpen">詳細設定で補正</button>'
+        : '<button type="button" class="btn small" id="orthoOpen">水平・垂直に補正</button>';
     }
     const isDimension = kind === 'dimensions';
     const count = G.orthogonalPoints(el, kind).length;
@@ -1712,6 +1714,8 @@
       html += propNum('始点X(mm)', 'x1', el.x1) + propNum('始点Y(mm)', 'y1', el.y1);
       html += propNum('終点X(mm)', 'x2', el.x2) + propNum('終点Y(mm)', 'y2', el.y2);
       html += '<p class="muted">両端の□はキャンバス上でドラッグでも動かせます。</p>';
+      html += '<button type="button" class="btn small" id="btnDimAutoAlign">補正する（自動）</button>';
+      html += '<p class="muted">長さと中心を保ち、用紙に対して近い水平または垂直にします。</p>';
     } else {
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
@@ -1930,6 +1934,21 @@
         <button class="btn small danger" id="btnDel">この要素を削除</button></div>`;
     }
     box.innerHTML = html;
+
+    const autoAlign = box.querySelector('#btnDimAutoAlign');
+    if (autoAlign) autoAlign.onclick = () => {
+      if (state.draft || state.measure || state.underlayMove) {
+        alert('作図や下絵の移動を終了してから補正してください。');
+        return;
+      }
+      const result = global.Orthogonal.autoAlignDimension(G.orthogonalPoints(el, kind));
+      if (!result.ok) { alert(result.message); return; }
+      flushHistory();
+      el.x1 = result.points[0].x; el.y1 = result.points[0].y;
+      el.x2 = result.points[1].x; el.y2 = result.points[1].y;
+      state.orthogonal = null;
+      recordHistory(); refresh(); showProps(el);
+    };
 
     const openOrthogonal = box.querySelector('#orthoOpen');
     if (openOrthogonal) openOrthogonal.onclick = () => {

@@ -106,6 +106,28 @@ test('dimension correction can hold either chosen endpoint without mutating the 
   assert.equal(JSON.stringify(project), before);
 });
 
+test('one-click dimension correction chooses the nearest axis and retains length and midpoint', () => {
+  for (const [a, b, expectedAxis] of [
+    [point(1000, 2000), point(5000, 3000), 'horizontal'],
+    [point(4000, 5000), point(3000, 1000), 'vertical'],
+    [point(1000, 1000), point(4000, 4000), 'horizontal'],
+    [point(4000, 2000), point(1000, 2000), 'horizontal'],
+  ]) {
+    const points = [a, b], before = JSON.stringify(points);
+    const result = Orthogonal.autoAlignDimension(points);
+    assert.ok(result.ok, result.message);
+    assert.equal(result.axis, expectedAxis);
+    const [c, d] = result.points;
+    assert.ok(Math.abs(Math.hypot(d.x - c.x, d.y - c.y) - Math.hypot(b.x - a.x, b.y - a.y)) < 1e-7);
+    assert.ok(Math.abs((a.x + b.x) / 2 - (c.x + d.x) / 2) < 1e-7);
+    assert.ok(Math.abs((a.y + b.y) / 2 - (c.y + d.y) / 2) < 1e-7);
+    if (expectedAxis === 'horizontal') assert.equal(c.y, d.y);
+    else assert.equal(c.x, d.x);
+    assert.equal(JSON.stringify(points), before);
+  }
+  assert.equal(Orthogonal.autoAlignDimension([point(1, 1), point(1, 1)]).ok, false);
+});
+
 test('picking a dimension endpoint on the canvas selects it without dragging or changing data', () => {
   const project = projectWithoutSamples();
   const dimension = Model.addDimension(project, 1000, 1000, 4000, 5000, 'plan');

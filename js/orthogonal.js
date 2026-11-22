@@ -229,5 +229,21 @@
     return firstFailure;
   }
 
-  global.Orthogonal = { adjustEdge: correctEdge, adjustAll: correctAll };
+  /* 寸法線の両端の差から近い軸を選ぶ。中心と長さを維持して位置ずれを抑える。 */
+  function autoAlignDimension(points) {
+    if (!Array.isArray(points) || points.length !== 2) {
+      return failure('invalid_points', '寸法線の両端を読み取れません。');
+    }
+    const invalid = validInput(points, false);
+    if (invalid) return invalid;
+    const [a, b] = points;
+    const axis = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? 'horizontal' : 'vertical';
+    const corrected = correctEdge(points, { edgeIndex: 0, anchorIndex: 0, axis, preserveLength: true });
+    if (!corrected.ok) return corrected;
+    const dx = ((b.x - a.x) - (corrected.points[1].x - corrected.points[0].x)) / 2;
+    const dy = ((b.y - a.y) - (corrected.points[1].y - corrected.points[0].y)) / 2;
+    return { ok: true, axis, points: corrected.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
+  }
+
+  global.Orthogonal = { adjustEdge: correctEdge, adjustAll: correctAll, autoAlignDimension };
 })(typeof window !== 'undefined' ? window : globalThis);

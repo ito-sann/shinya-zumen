@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=1.87.11">
+  <link rel="stylesheet" href="css/style.css?v=1.87.12">
 </head>
 <body>
   <header class="topbar">
@@ -204,7 +204,7 @@
         </div>
         <!-- 柱の面積控除は自動求積とセットの機能のため、手入力の求積表への移行に伴い非表示(仕組みは残置) -->
         <label class="check-row" style="display:none"><input type="checkbox" id="deductPillars"> 柱の面積を区画の面積から差し引く</label>
-        <p class="muted">柱は「区画を追加」から追加します。</p>
+        <p class="muted">柱は「囲い線を描く」で形を作成し、右側の「種別」で「柱」を選ぶと配置できます。求積表は手入力です。</p>
       </section>
 
       <section class="group" data-layers="plan kyuseki">
@@ -375,14 +375,14 @@
     </div>
   </div>
 
-  <script src="js/model.js?v=1.87.11"></script>
-  <script src="js/geometry.js?v=1.87.11"></script>
-  <script src="js/orthogonal.js?v=1.87.11"></script>
-  <script src="js/render.js?v=1.87.11"></script>
-  <script src="js/interactions.js?v=1.87.11"></script>
-  <script src="js/print.js?v=1.87.11"></script>
-  <script src="js/forms.js?v=1.87.11"></script>
-  <script src="js/main.js?v=1.87.11"></script>
+  <script src="js/model.js?v=1.87.12"></script>
+  <script src="js/geometry.js?v=1.87.12"></script>
+  <script src="js/orthogonal.js?v=1.87.12"></script>
+  <script src="js/render.js?v=1.87.12"></script>
+  <script src="js/interactions.js?v=1.87.12"></script>
+  <script src="js/print.js?v=1.87.12"></script>
+  <script src="js/forms.js?v=1.87.12"></script>
+  <script src="js/main.js?v=1.87.12"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       let serviceWorkerRefreshing = false;
