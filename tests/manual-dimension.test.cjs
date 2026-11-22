@@ -87,6 +87,95 @@ test('legacy dimensions without a font size render at 8 while explicit and old f
   assert.ok(parseFloat(fontFor('5.00m')) > parseFloat(fontFor('3.00m')));
 });
 
+test('default, size 5 and size 15 labels survive saving for each editable text kind on screen and in print', () => {
+  const project = projectWithoutSamples();
+  const variants = [['default', null], ['size5', 5], ['size8', 8], ['size15', 15]];
+  const entries = [];
+
+  for (const [kind, prefix] of [['region', '部屋'], ['polygonRegion', '多角区画'], ['furniture', '備品'],
+    ['polygonFurniture', '多角備品'], ['fitting', '建具'], ['note', '注記'], ['dimension', '寸法']]) {
+    for (const [index, [variant, size]] of variants.entries()) {
+      let el, expected;
+      if (kind === 'region') {
+        el = Model.addRegion(project, 'other', 4000, 3000, 'rect');
+        el.label = `${prefix}-${variant}`; el.showLabel = true; expected = el.label;
+      } else if (kind === 'polygonRegion') {
+        el = Model.addPolygonRegion(project, 'other', [point(0, 0), point(4000, 0), point(2000, 3000)]);
+        el.label = `${prefix}-${variant}`; el.showLabel = true; expected = el.label;
+      } else if (kind === 'furniture') {
+        el = Model.addFurniture(project, 'table');
+        el.label = `${prefix}-${variant}`; expected = el.label;
+      } else if (kind === 'polygonFurniture') {
+        el = Model.addPolygonFurniture(project, [point(0, 0), point(4000, 0), point(2000, 3000)]);
+        el.label = `${prefix}-${variant}`; expected = el.label;
+      } else if (kind === 'fitting') {
+        el = Model.addFitting(project, 'pillar');
+        el.w = 4000; el.h = 4000;
+        el.label = `${prefix}-${variant}`; expected = el.label;
+      } else if (kind === 'note') {
+        el = Model.addNote(project, 'plan');
+        el.text = `${prefix}-${variant}`; expected = el.text;
+      } else {
+        const length = (index + 3) * 1000;
+        el = Model.addDimension(project, 0, 0, length, 0, 'plan');
+        el.showLength = true; expected = `${index + 3}.00m`;
+      }
+      if (size == null) delete el.fontSize; else el.fontSize = size;
+      entries.push({ kind, variant, size, id: el.id, expected });
+    }
+  }
+
+  const loaded = Model.deserialize(Model.serialize(project));
+  for (const entry of entries) {
+    const restored = Model.findById(loaded, entry.id).element;
+    if (entry.size != null) assert.equal(restored.fontSize, entry.size, `${entry.kind} ${entry.variant} saved size`);
+  }
+  const prevZoom = Render.view.zoom;
+  try {
+    Render.view.zoom = 0.05;
+    Render.setLayer('plan');
+    for (const print of [false, true]) {
+      const rec = recorder();
+      Render.render(rec.ctx, { width: 800, height: 600 }, loaded,
+        { selectedId: entries[0].id }, { print });
+      const getSize = entry => {
+        const text = rec.events.find(e => e.type === 'text' && e.value.includes(entry.expected));
+        assert.ok(text, `missing ${entry.kind} ${entry.variant} in ${print ? 'print' : 'screen'}`);
+        return parseFloat(text.font);
+      };
+      for (const kind of ['region', 'polygonRegion', 'furniture', 'polygonFurniture', 'fitting', 'note', 'dimension']) {
+        const kindEntries = entries.filter(e => e.kind === kind);
+        const sizes = Object.fromEntries(kindEntries.map(e => [e.variant, getSize(e)]));
+        assert.equal(sizes.default, sizes.size8, `${kind}: default should match explicit 8`);
+        assert.ok(sizes.size5 < sizes.size8, `${kind}: 5 should be smaller than 8`);
+        assert.ok(sizes.size8 < sizes.size15, `${kind}: 15 should be larger than 8`);
+      }
+    }
+  } finally { Render.view.zoom = prevZoom; }
+});
+
+test('legacy fontMm converts to size 5 and global percentage still scales unspecified text', () => {
+  const project = projectWithoutSamples();
+  const legacy = Model.addNote(project, 'plan');
+  legacy.text = '旧サイズ'; legacy.fontMm = 80; // 80 mm represented size 5 for a note.
+  const implicit = Model.addNote(project, 'plan'); implicit.text = '自動サイズ';
+  const explicit = Model.addNote(project, 'plan'); explicit.text = '指定サイズ'; explicit.fontSize = 8;
+  const loaded = Model.deserialize(Model.serialize(project));
+  assert.equal(Model.findById(loaded, legacy.id).element.fontSize, 5);
+  const fontFor = (percent, text) => {
+    loaded.meta.fontScale = percent;
+    const rec = recorder();
+    Render.setLayer('plan');
+    Render.render(rec.ctx, { width: 800, height: 600 }, loaded, { selectedId: null });
+    const label = rec.events.find(e => e.type === 'text' && e.value === text);
+    assert.ok(label, `missing note ${text}`);
+    return parseFloat(label.font);
+  };
+  const base = fontFor(100, '自動サイズ');
+  assert.ok(Math.abs(fontFor(150, '自動サイズ') / base - 1.5) < 1e-9);
+  assert.equal(fontFor(100, '指定サイズ'), fontFor(150, '指定サイズ'));
+});
+
 test('dimension correction can hold either chosen endpoint without mutating the original', () => {
   const project = projectWithoutSamples();
   const dimension = Model.addDimension(project, 1000, 1000, 4000, 5000, 'plan');

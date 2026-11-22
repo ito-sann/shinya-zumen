@@ -1695,14 +1695,14 @@
       html += `<p class="muted">空欄なら自動: ${esc(autoExpr)}。面積の数値は図形から自動計算されます。</p>`;
     }
     // ラベルを持つ要素は文字サイズを個別に調整できる。
-    // Googleドキュメント風のサイズ番号(15=標準)で、−/＋は段階リストを移動する。
+    // サイズ番号は8を標準とし、−/＋は段階リストを移動する。
     if (kind === 'regions' || kind === 'furniture' || kind === 'fittings' || kind === 'notes' || kind === 'dimensions') {
-      const defaultSize = kind === 'dimensions' ? 8 : 15;
+      const defaultSize = M.DEFAULT_FONT_SIZE;
       const curSize = el.fontSize > 0 ? el.fontSize : defaultSize;
       html += `<div class="prop-row"><span>文字サイズ</span>
         <span class="font-ctrl">
           <button type="button" id="fontMinus" class="btn small">−</button>
-          <input type="number" id="fontInput" step="1" min="6" max="96"
+          <input type="number" id="fontInput" step="1" min="${M.MIN_FONT_SIZE}" max="${M.MAX_FONT_SIZE}"
                  value="${curSize}" title="サイズ(${defaultSize}=標準)">
           <button type="button" id="fontPlus" class="btn small">＋</button>
           <button type="button" id="fontAuto" class="btn small">標準</button>
@@ -2178,15 +2178,14 @@
     const cs = box.querySelector('#btnProfClearS');
     if (cs) cs.onclick = () => { el.side = null; refresh(); showProps(el); };
 
-    // 文字サイズ(Googleドキュメント風)。15が標準で、−/＋は段階リストの
-    // 前後のサイズへ移動する。数値の直接入力も可能(6〜96)。標準=15に戻す。
+    // 文字サイズ。−/＋は段階リストの前後へ移動し、標準ボタンで8に戻す。
     const fontInput = box.querySelector('#fontInput');
     if (fontInput) {
-      const STEPS = [8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
-      const defaultSize = kind === 'dimensions' ? 8 : 15;
+      const STEPS = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
+      const defaultSize = M.DEFAULT_FONT_SIZE;
       const current = () => (el.fontSize > 0 ? el.fontSize : defaultSize);
       const apply = (s) => {
-        el.fontSize = Math.min(96, Math.max(6, Math.round(s)));
+        el.fontSize = Math.min(M.MAX_FONT_SIZE, Math.max(M.MIN_FONT_SIZE, Math.round(s)));
         fontInput.value = el.fontSize;
         refresh();
       };
@@ -2205,7 +2204,7 @@
       fontInput.addEventListener('input', (e) => {
         const v = parseFloat(e.target.value);
         if (v > 0) {
-          el.fontSize = Math.min(96, Math.max(6, Math.round(v)));
+          el.fontSize = Math.min(M.MAX_FONT_SIZE, Math.max(M.MIN_FONT_SIZE, Math.round(v)));
           refresh();
         }
       });

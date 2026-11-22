@@ -5,6 +5,9 @@
 (function (global) {
   'use strict';
 
+  /* 図面の文字サイズ番号。従来の指定値はそのまま保存・表示する。 */
+  const DEFAULT_FONT_SIZE = 8, MIN_FONT_SIZE = 5, MAX_FONT_SIZE = 96;
+
   /* 区画(部屋)の種類 */
   const REGION_TYPES = {
     kyakushitsu: { label: '客室',   color: '#ffe0b2' },
@@ -755,7 +758,7 @@
       layer: layer || 'kyuseki',
       layers: [layer || 'kyuseki'], // 既定では求積図だけに表示(平面図には出さない)
       showLength: false, // 既定では長さの数値は図面に表示しない
-      fontSize: 8, // 寸法の長さは小さめを標準にする
+      fontSize: DEFAULT_FONT_SIZE,
     };
     project.dimensions = project.dimensions || [];
     project.dimensions.push(dim);
@@ -1015,7 +1018,7 @@
     const convertFontMm = (list, defaultMm) => {
       for (const el of list || []) {
         if (el.fontMm > 0 && !(el.fontSize > 0)) {
-          el.fontSize = Math.min(96, Math.max(6, Math.round(el.fontMm / defaultMm * 15)));
+          el.fontSize = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, Math.round(el.fontMm / defaultMm * 15)));
         }
         delete el.fontMm;
       }
@@ -1064,6 +1067,7 @@
   }
 
   global.Model = {
+    DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE,
     REGION_TYPES, AREA_USES, FURNITURE_CATALOG, FITTING_CATALOG, DOOR_KINDS, FIXTURE_CATALOG, PAPER_SIZES,
     FIXTURE_SYMBOL_SCALE_MIN, FIXTURE_SYMBOL_SCALE_MAX, fixtureSymbolScale, fixtureSymbolRadius,
     FURNITURE_STYLES, defaultStyle, furniturePreset,

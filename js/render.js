@@ -49,12 +49,11 @@
   let fontScale = 1;
 
   /* ラベル文字のサイズ(px)を求める。
-   *   defaultMm … 既定の実寸(mm)
-   *   el        … 要素。el.fontSize(サイズ番号: 15=標準)が指定されていれば
-   *               全体設定より優先する。 */
+   * defaultMm は従来のサイズ番号15に相当する実寸(mm)。
+   * 個別サイズは全体設定より優先し、未指定なら標準8と全体倍率を使う。 */
   function fontPx(defaultMm, el) {
     if (el && el.fontSize > 0) return wpx(defaultMm * el.fontSize / 15);
-    return wpx(defaultMm * fontScale);
+    return wpx(defaultMm * global.Model.DEFAULT_FONT_SIZE / 15 * fontScale);
   }
 
   /* 回転した図形の中で文字だけ正立(水平)のまま描く。
@@ -2025,7 +2024,7 @@
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       const off = Math.max(8, wpx(220));
       // 旧保存データでサイズ指定がない寸法も標準の8として描く。
-      ctx.font = `${fontPx(240, d.fontSize > 0 ? d : { fontSize: 8 })}px sans-serif`;
+      ctx.font = `${fontPx(240, d.fontSize > 0 ? d : { fontSize: global.Model.DEFAULT_FONT_SIZE })}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       // 文字が線で隠れないよう白フチを敷く
