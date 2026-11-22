@@ -638,7 +638,7 @@
     }
   }
 
-  function drawCurtainSymbol(ctx, w, h, g, line) {
+  function drawCurtainSymbol(ctx, w, h, line) {
     const amp = Math.max(2, Math.min(h * 0.34, wpx(70)));
     const wave = Math.max(10, wpx(220));
     ctx.strokeStyle = line;
@@ -662,11 +662,6 @@
     ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(-w / 2, h / 2);
     ctx.moveTo(w / 2, -h / 2);  ctx.lineTo(w / 2, h / 2);
     ctx.stroke();
-    ctx.fillStyle = line;
-    ctx.font = `${fontPx(180, g)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    fillTextUpright(ctx, (g.rotation || 0) * Math.PI / 180, 0, h / 2 + wpx(45), g.label || 'カーテン');
   }
 
   /* 建具・設備(出入口・扉・戸・窓・壁・柱)を製図記号で描く */
@@ -711,7 +706,7 @@
       ctx.stroke();
     } else if (g.kind === 'curtain') {
       // 仕切り用カーテン。波線で、壁や扉と区別しやすく表示する。
-      drawCurtainSymbol(ctx, w, h, g, sel ? '#d32f2f' : '#6d4c41');
+      drawCurtainSymbol(ctx, w, h, sel ? '#d32f2f' : '#6d4c41');
     } else if (global.Model.DOOR_KINDS.indexOf(g.kind) >= 0) {
       // 扉・戸の製図記号。開き勝手は flip(左右) / swing(内外) で反転する
       ctx.strokeStyle = line;
