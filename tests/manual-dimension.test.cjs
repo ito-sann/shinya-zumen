@@ -128,6 +128,27 @@ test('one-click dimension correction chooses the nearest axis and retains length
   assert.equal(Orthogonal.autoAlignDimension([point(1, 1), point(1, 1)]).ok, false);
 });
 
+test('one-click alignment also handles rotated two-point lines and walls without modifying them', () => {
+  for (const kind of ['lines', 'walls']) {
+    const project = projectWithoutSamples();
+    const points = [point(1000, 1000), point(4000, 3000)];
+    const el = kind === 'lines'
+      ? Model.addPolyline(project, points, '#123456', 'dashed')
+      : Model.addPolygonWall(project, points, 120);
+    el.rotation = 37;
+    const original = Geometry.orthogonalPoints(el, kind);
+    const before = JSON.stringify(project);
+    const result = Orthogonal.autoAlignTwoPoints(original);
+    assert.ok(result.ok, result.message);
+    const [a, b] = original, [c, d] = result.points;
+    assert.ok(Math.abs(Math.hypot(d.x - c.x, d.y - c.y) - Math.hypot(b.x - a.x, b.y - a.y)) < 1e-7);
+    assert.ok(Math.abs((a.x + b.x) / 2 - (c.x + d.x) / 2) < 1e-7);
+    assert.ok(Math.abs((a.y + b.y) / 2 - (c.y + d.y) / 2) < 1e-7);
+    assert.ok(c.x === d.x || c.y === d.y);
+    assert.equal(JSON.stringify(project), before);
+  }
+});
+
 test('picking a dimension endpoint on the canvas selects it without dragging or changing data', () => {
   const project = projectWithoutSamples();
   const dimension = Model.addDimension(project, 1000, 1000, 4000, 5000, 'plan');

@@ -229,10 +229,10 @@
     return firstFailure;
   }
 
-  /* 寸法線の両端の差から近い軸を選ぶ。中心と長さを維持して位置ずれを抑える。 */
-  function autoAlignDimension(points) {
+  /* 2点の差から近い軸を選ぶ。中心と長さを維持して位置ずれを抑える。 */
+  function autoAlignTwoPoints(points) {
     if (!Array.isArray(points) || points.length !== 2) {
-      return failure('invalid_points', '寸法線の両端を読み取れません。');
+      return failure('invalid_points', '線の両端を読み取れません。');
     }
     const invalid = validInput(points, false);
     if (invalid) return invalid;
@@ -245,5 +245,6 @@
     return { ok: true, axis, points: corrected.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
   }
 
-  global.Orthogonal = { adjustEdge: correctEdge, adjustAll: correctAll, autoAlignDimension };
+  global.Orthogonal = { adjustEdge: correctEdge, adjustAll: correctAll,
+    autoAlignTwoPoints, autoAlignDimension: autoAlignTwoPoints };
 })(typeof window !== 'undefined' ? window : globalThis);

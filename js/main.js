@@ -1507,6 +1507,20 @@
   }
 
   /* 補正操作の状態は project に保存せず、確定時だけ図面に反映する。 */
+  function applyOrthogonalPoints(el, kind, points) {
+    if (kind === 'dimensions') {
+      el.x1 = points[0].x; el.y1 = points[0].y;
+      el.x2 = points[1].x; el.y2 = points[1].y;
+      return;
+    }
+    const xs = points.map(p => p.x), ys = points.map(p => p.y);
+    const minX = Math.min(...xs), minY = Math.min(...ys);
+    el.x = minX; el.y = minY;
+    el.w = Math.max(...xs) - minX; el.h = Math.max(...ys) - minY;
+    el.points = points.map(p => ({ x: p.x - minX, y: p.y - minY }));
+    el.rotation = 0;
+  }
+
   function orthogonalPanel(el, kind) {
     const o = state.orthogonal;
     if (!o || o.id !== el.id) {
@@ -1714,11 +1728,13 @@
       html += propNum('始点X(mm)', 'x1', el.x1) + propNum('始点Y(mm)', 'y1', el.y1);
       html += propNum('終点X(mm)', 'x2', el.x2) + propNum('終点Y(mm)', 'y2', el.y2);
       html += '<p class="muted">両端の□はキャンバス上でドラッグでも動かせます。</p>';
-      html += '<button type="button" class="btn small" id="btnDimAutoAlign">補正する（自動）</button>';
-      html += '<p class="muted">長さと中心を保ち、用紙に対して近い水平または垂直にします。</p>';
     } else {
       html += propNum('X位置(mm)', 'x', el.x);
       html += propNum('Y位置(mm)', 'y', el.y);
+    }
+    if (['dimensions', 'walls', 'lines'].includes(kind) && G.orthogonalPoints(el, kind).length === 2) {
+      html += '<button type="button" class="btn small" id="btnAutoAlignTwoPoints">補正する（自動）</button>';
+      html += '<p class="muted">長さと中心を保ち、用紙に対して近い水平または垂直にします。</p>';
     }
     if (['lines', 'walls', 'premise', 'dimensions'].includes(kind) && G.orthogonalPoints(el, kind).length >= 2) {
       html += orthogonalPanel(el, kind);
@@ -1940,17 +1956,16 @@
     }
     box.innerHTML = html;
 
-    const autoAlign = box.querySelector('#btnDimAutoAlign');
+    const autoAlign = box.querySelector('#btnAutoAlignTwoPoints');
     if (autoAlign) autoAlign.onclick = () => {
       if (state.draft || state.measure || state.underlayMove) {
         alert('作図や下絵の移動を終了してから補正してください。');
         return;
       }
-      const result = global.Orthogonal.autoAlignDimension(G.orthogonalPoints(el, kind));
+      const result = global.Orthogonal.autoAlignTwoPoints(G.orthogonalPoints(el, kind));
       if (!result.ok) { alert(result.message); return; }
       flushHistory();
-      el.x1 = result.points[0].x; el.y1 = result.points[0].y;
-      el.x2 = result.points[1].x; el.y2 = result.points[1].y;
+      applyOrthogonalPoints(el, kind, result.points);
       state.orthogonal = null;
       recordHistory(); refresh(); showProps(el);
     };
@@ -2029,17 +2044,7 @@
           return;
         }
         flushHistory();
-        if (kind === 'dimensions') {
-          el.x1 = o.preview[0].x; el.y1 = o.preview[0].y;
-          el.x2 = o.preview[1].x; el.y2 = o.preview[1].y;
-        } else {
-          const xs = o.preview.map(p => p.x), ys = o.preview.map(p => p.y);
-          const minX = Math.min(...xs), minY = Math.min(...ys);
-          el.x = minX; el.y = minY;
-          el.w = Math.max(...xs) - minX; el.h = Math.max(...ys) - minY;
-          el.points = o.preview.map(p => ({ x: p.x - minX, y: p.y - minY }));
-          el.rotation = 0;
-        }
+        applyOrthogonalPoints(el, kind, o.preview);
         state.orthogonal = null;
         recordHistory(); refresh(); showProps(el);
       };
