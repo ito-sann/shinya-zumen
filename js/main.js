@@ -1008,7 +1008,7 @@
     $('metaFrame').onchange = (e) => { m.showPaperFrame = e.target.checked; draw(); };
     $('metaNorth').onchange = (e) => { m.showNorthMark = e.target.checked; draw(); };
     $('premCenterlines').onchange = (e) => { m.showPremiseCenterlines = e.target.checked; draw(); };
-    $('metaFontScale').onchange = (e) => { m.fontScale = parseInt(e.target.value, 10); draw(); };
+    $('metaFontScale').onchange = (e) => { m.fontScale = parseFloat(e.target.value); draw(); };
     // 営業所求積の方式(署のローカルルール)。求積表とサマリーに反映する
     $('premMethod').onchange = (e) => { m.premisesMethod = e.target.value; refresh(); };
     // 柱の面積を区画(客室・調理場など)の面積から差し引くか
@@ -1571,6 +1571,41 @@
       <button type="button" class="btn small" id="orthoCancel">補正をやめる</button></div>`;
   }
 
+  const FONT_SIZE_STEPS = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
+
+  function fontControlsHtml(size) {
+    return `<div class="prop-row"><span>文字サイズ</span>
+      <span class="font-ctrl">
+        <button type="button" id="fontMinus" class="btn small">−</button>
+        <input type="number" id="fontInput" step="1" min="${M.MIN_FONT_SIZE}" max="${M.MAX_FONT_SIZE}"
+               value="${size}" title="サイズ(${M.DEFAULT_FONT_SIZE}=標準)">
+        <button type="button" id="fontPlus" class="btn small">＋</button>
+        <button type="button" id="fontAuto" class="btn small">標準</button>
+      </span></div>`;
+  }
+
+  function bindFontControls(box, current, setSize) {
+    const input = box.querySelector('#fontInput');
+    if (!input) return;
+    const clamp = s => Math.min(M.MAX_FONT_SIZE, Math.max(M.MIN_FONT_SIZE, Math.round(s)));
+    const apply = s => { const size = clamp(s); setSize(size); input.value = size; };
+    box.querySelector('#fontMinus').onclick = () => {
+      const c = current(), smaller = FONT_SIZE_STEPS.filter(s => s < c);
+      apply(smaller.length ? smaller[smaller.length - 1] : c);
+    };
+    box.querySelector('#fontPlus').onclick = () => {
+      const c = current(), bigger = FONT_SIZE_STEPS.find(s => s > c);
+      apply(bigger != null ? bigger : c);
+    };
+    box.querySelector('#fontAuto').onclick = () => apply(M.DEFAULT_FONT_SIZE);
+    // 入力中は欄を書き戻さず、確定時にだけ丸める。
+    input.addEventListener('input', e => {
+      const value = parseFloat(e.target.value);
+      if (value > 0) setSize(clamp(value));
+    });
+    input.addEventListener('change', () => apply(current()));
+  }
+
   /* ---- プロパティ編集 ---- */
   function showProps(el) {
     const box = $('props');
@@ -1587,8 +1622,13 @@
         <label class="prop-row"><span>X位置(mm)</span><input type="number" step="10" id="sheetTableX" value="${Math.round(x || 0)}"></label>
         <label class="prop-row"><span>Y位置(mm)</span><input type="number" step="10" id="sheetTableY" value="${Math.round(y || 0)}"></label>
         <label class="prop-row"><span>サイズ(%)</span><input type="number" step="5" min="45" max="240" id="sheetTableScale" value="${Math.round(scale * 100)}"></label>
+        ${fontControlsHtml(cur.fontSize > 0 ? cur.fontSize : M.DEFAULT_FONT_SIZE)}
         <p class="muted">表の中をドラッグで移動、右下の青い四角をドラッグでサイズ変更できます。</p>
         <button class="btn small" id="sheetTableReset">右下の自動位置に戻す</button>`;
+      bindFontControls(box, () => {
+        const layout = (project.meta.sheetTableLayouts || {})[layer] || {};
+        return layout.fontSize > 0 ? layout.fontSize : M.DEFAULT_FONT_SIZE;
+      }, size => { R.setSheetTableLayout(project, layer, { fontSize: size }); draw(); });
       const apply = () => {
         const nx = parseFloat($('sheetTableX').value) || 0;
         const ny = parseFloat($('sheetTableY').value) || 0;
@@ -1600,7 +1640,11 @@
         $(id).addEventListener('change', apply);
       });
       $('sheetTableReset').onclick = () => {
-        if (project.meta.sheetTableLayouts) delete project.meta.sheetTableLayouts[layer];
+        if (project.meta.sheetTableLayouts) {
+          const layout = project.meta.sheetTableLayouts[layer] || {};
+          if (layout.fontSize > 0) project.meta.sheetTableLayouts[layer] = { fontSize: layout.fontSize };
+          else delete project.meta.sheetTableLayouts[layer];
+        }
         state.selectedId = null;
         draw();
         showProps(null);
@@ -1696,17 +1740,8 @@
     }
     // ラベルを持つ要素は文字サイズを個別に調整できる。
     // サイズ番号は8を標準とし、−/＋は段階リストを移動する。
-    if (kind === 'regions' || kind === 'furniture' || kind === 'fittings' || kind === 'notes' || kind === 'dimensions') {
-      const defaultSize = M.DEFAULT_FONT_SIZE;
-      const curSize = el.fontSize > 0 ? el.fontSize : defaultSize;
-      html += `<div class="prop-row"><span>文字サイズ</span>
-        <span class="font-ctrl">
-          <button type="button" id="fontMinus" class="btn small">−</button>
-          <input type="number" id="fontInput" step="1" min="${M.MIN_FONT_SIZE}" max="${M.MAX_FONT_SIZE}"
-                 value="${curSize}" title="サイズ(${defaultSize}=標準)">
-          <button type="button" id="fontPlus" class="btn small">＋</button>
-          <button type="button" id="fontAuto" class="btn small">標準</button>
-        </span></div>`;
+    if (['regions', 'furniture', 'fittings', 'fixtures', 'notes', 'dimensions'].includes(kind)) {
+      html += fontControlsHtml(el.fontSize > 0 ? el.fontSize : M.DEFAULT_FONT_SIZE);
     }
     if (kind === 'dimensions') {
       // 寸法線: 長さ(自動)と表示する図面、両端の座標(直接入力も可)
@@ -2178,38 +2213,9 @@
     const cs = box.querySelector('#btnProfClearS');
     if (cs) cs.onclick = () => { el.side = null; refresh(); showProps(el); };
 
-    // 文字サイズ。−/＋は段階リストの前後へ移動し、標準ボタンで8に戻す。
-    const fontInput = box.querySelector('#fontInput');
-    if (fontInput) {
-      const STEPS = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 24, 30, 36, 48, 60, 72, 96];
-      const defaultSize = M.DEFAULT_FONT_SIZE;
-      const current = () => (el.fontSize > 0 ? el.fontSize : defaultSize);
-      const apply = (s) => {
-        el.fontSize = Math.min(M.MAX_FONT_SIZE, Math.max(M.MIN_FONT_SIZE, Math.round(s)));
-        fontInput.value = el.fontSize;
-        refresh();
-      };
-      box.querySelector('#fontMinus').onclick = () => {
-        const c = current();
-        const smaller = STEPS.filter((s) => s < c);
-        apply(smaller.length ? smaller[smaller.length - 1] : c);
-      };
-      box.querySelector('#fontPlus').onclick = () => {
-        const c = current();
-        const bigger = STEPS.find((s) => s > c);
-        apply(bigger != null ? bigger : c);
-      };
-      box.querySelector('#fontAuto').onclick = () => apply(defaultSize);
-      // 入力中は値を書き戻さない(タイプの邪魔をしない)。確定時にだけ丸める。
-      fontInput.addEventListener('input', (e) => {
-        const v = parseFloat(e.target.value);
-        if (v > 0) {
-          el.fontSize = Math.min(M.MAX_FONT_SIZE, Math.max(M.MIN_FONT_SIZE, Math.round(v)));
-          refresh();
-        }
-      });
-      fontInput.addEventListener('change', () => apply(current()));
-    }
+    // 文字サイズは標準8、最小5。照明・音響の記号内の文字にも使う。
+    bindFontControls(box, () => el.fontSize > 0 ? el.fontSize : M.DEFAULT_FONT_SIZE,
+      size => { el.fontSize = size; refresh(); });
     // 区画の種別変更: ラベル・色・通し番号を新しい種別に合わせて付け直す
     const typeSel = box.querySelector('#propType');
     if (typeSel) {

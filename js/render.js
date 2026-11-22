@@ -1093,7 +1093,7 @@
     ctx.fillStyle = '#333333';
     // 記号が長い(枝番つき等)場合は円に収まるよう文字を少し縮める
     const fontMm = sym.length > 3 ? 170 * (3 / sym.length) : 170;
-    ctx.font = `bold ${wpx(fontMm * symbolScale)}px sans-serif`;
+    ctx.font = `bold ${fontPx(fontMm * symbolScale, x)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(sym, p.x, p.y);
@@ -1273,9 +1273,14 @@
     if (!tables.length && !noteLines.length) return;
     layoutKey = layoutKey || currentLayer;
 
+    const saved = ((project.meta && project.meta.sheetTableLayouts) || {})[layoutKey] || {};
+    const tableFont = saved.fontSize > 0 ? { fontSize: saved.fontSize } : null;
+    // 表の文字も標準8・個別指定を使う。大きい文字では行高を広げる。
+    const fp = fontPx(230, tableFont), tp = fontPx(270, tableFont);
     // 基準サイズ(実寸mm→px)。収まらなければ係数 s を掛けて縮める。
     const base = {
-      fp: wpx(230), tp: wpx(270), rowH: wpx(360), titleH: wpx(470), cpx: wpx(140),
+      fp, tp, rowH: Math.max(wpx(360), fp * 1.35),
+      titleH: Math.max(wpx(470), tp * 1.3), cpx: wpx(140),
     };
     const padIn = wpx(150), gap = wpx(260), noteGap = wpx(160);
 
@@ -1319,7 +1324,6 @@
     }
     const margin = wpx(250);
     const fitScale = Math.min(1, (avW - margin * 2) / W, (avH - margin * 2) / H);
-    const saved = ((project.meta && project.meta.sheetTableLayouts) || {})[layoutKey] || {};
     const userScale = clampTableScale(saved.scale == null ? DEFAULT_SHEET_TABLE_SCALE : saved.scale);
     const s = fitScale * userScale;
 
@@ -1453,9 +1457,9 @@
     ctx.setLineDash([10, 6]);
     ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
     ctx.setLineDash([]);
-    // 左上: 用紙の説明(実寸240mm相当の固定サイズ)
+    // 左上: 用紙の説明
     ctx.fillStyle = '#1d4ed8';
-    ctx.font = `${wpx(240)}px sans-serif`;
+    ctx.font = `${fontPx(240)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     const orient = m.orientation === 'portrait' ? '縦' : '横';
@@ -1482,7 +1486,7 @@
       ctx.moveTo((bx1 + bx2) / 2, by - tkS); ctx.lineTo((bx1 + bx2) / 2, by + tkS);
       ctx.stroke();
       // ラベル: 線の両端に 0 / 1m、上に縮尺
-      ctx.font = `bold ${wpx(240)}px sans-serif`;
+      ctx.font = `bold ${fontPx(240)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText('0', bx1, by + wpx(180));
@@ -1540,7 +1544,7 @@
     const lr = r + wpx(380);
     const lx = cx + Math.sin(n.angle) * lr;
     const ly = cy - Math.cos(n.angle) * lr;
-    ctx.font = `bold ${wpx(280)}px sans-serif`;
+    ctx.font = `bold ${fontPx(280)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('N', lx, ly);
     ctx.restore();

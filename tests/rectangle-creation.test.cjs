@@ -230,5 +230,111 @@ test('1/35 scale survives saving and sets the paper frame and PDF scale bar', ()
   assert.ok(Math.abs(rendered.width / rendered.zoom - 10395) < 1e-7);
   assert.match(html, /aria-label="縮尺 1\/35"/);
   assert.match(html, /frame-scale-bar" style="width:28\.57mm/);
+  assert.match(html, /--scale-label-size:128px/);
+  loaded.meta.fontScale = 150;
+  win.Printer.printCurrent(loaded);
+  assert.match(html, /frame-scale-bar" style="width:28\.57mm/);
+  assert.match(html, /--scale-label-size:192px/);
+  loaded.meta.fontScale = 62.5;
+  win.Printer.printCurrent(loaded);
+  assert.match(html, /frame-scale-bar" style="width:28\.57mm/);
+  assert.match(html, /--scale-label-size:80px/);
   assert.deepEqual(view, { zoom: 0.05, offsetX: 12, offsetY: 34 });
+});
+
+function textRecorder() {
+  const labels = [];
+  const base = {};
+  const ctx = new Proxy(base, {
+    get(obj, key) {
+      if (key === 'measureText') return value => ({ width: String(value).length * (parseFloat(String(obj.font).replace('bold ', '')) || 0) });
+      if (key === 'fillText') return (value, x, y) => labels.push({ value: String(value), x, y, font: obj.font });
+      return key in obj ? obj[key] : () => {};
+    },
+    set(obj, key, value) { obj[key] = value; return true; },
+  });
+  return { ctx, labels };
+}
+
+test('table text defaults to size 8, respects size 5 after saving, and prints the same', () => {
+  const project = M.defaultProject();
+  project.meta.showPaperFrame = false;
+  project.meta.showNorthMark = false;
+  project.meta.manualKyuseki = { digits: 2, rows: [
+    { id: 'row1', name: '試験区画', expr: '2*3', group: 'kyakushitsu' },
+  ] };
+  const originalView = { ...R.view };
+  const originalLayer = R.getLayer();
+  const renderTable = (p, print) => {
+    const { ctx, labels } = textRecorder();
+    R.setLayer('kyusekihyo');
+    R.view.zoom = 0.03;
+    R.view.offsetX = R.view.offsetY = 0;
+    R.render(ctx, { width: 1200, height: 900 }, p, { selectedId: null }, { print });
+    const font = text => {
+      const label = labels.find(e => e.value === text);
+      assert.ok(label, `missing table text ${text}`);
+      return parseFloat(String(label.font).replace('bold ', ''));
+    };
+    return { title: font('客室求積表'), cell: font('試験区画') };
+  };
+  try {
+    const standard = renderTable(project, false);
+    project.meta.sheetTableLayouts = { kyusekihyo: { fontSize: 8 } };
+    const explicit = renderTable(project, false);
+    assert.deepEqual(explicit, standard);
+    project.meta.sheetTableLayouts.kyusekihyo.fontSize = 5;
+    const loaded = M.deserialize(M.serialize(project));
+    assert.equal(loaded.meta.sheetTableLayouts.kyusekihyo.fontSize, 5);
+    const smaller = renderTable(loaded, false);
+    const printed = renderTable(loaded, true);
+    assert.ok(Math.abs(smaller.title / standard.title - 5 / 8) < 1e-9);
+    assert.ok(Math.abs(smaller.cell / standard.cell - 5 / 8) < 1e-9);
+    assert.deepEqual(printed, smaller);
+    loaded.meta.fontScale = 150;
+    assert.deepEqual(renderTable(loaded, false), smaller);
+    delete loaded.meta.sheetTableLayouts.kyusekihyo.fontSize;
+    const global = renderTable(loaded, false);
+    assert.ok(Math.abs(global.title / standard.title - 1.5) < 1e-9);
+    assert.ok(Math.abs(global.cell / standard.cell - 1.5) < 1e-9);
+  } finally {
+    Object.assign(R.view, originalView);
+    R.setLayer(originalLayer);
+  }
+});
+
+test('north and scale labels use the standard text size and global font percentage', () => {
+  const project = M.defaultProject();
+  project.meta.scale = 35;
+  project.meta.showPaperFrame = true;
+  project.meta.showNorthMark = true;
+  const originalView = { ...R.view };
+  const originalLayer = R.getLayer();
+  const renderLabels = percent => {
+    project.meta.fontScale = percent;
+    const { ctx, labels } = textRecorder();
+    R.setLayer('plan');
+    R.view.zoom = 0.1;
+    R.view.offsetX = R.view.offsetY = 0;
+    R.render(ctx, { width: 1200, height: 900 }, project, { selectedId: null });
+    return ['N', '縮尺 1/35'].map(text => {
+      const found = labels.find(e => e.value === text);
+      assert.ok(found, `missing ${text}`);
+      return parseFloat(String(found.font).replace('bold ', ''));
+    });
+  };
+  try {
+    const standard = renderLabels(100);
+    assert.ok(Math.abs(standard[0] - 280 * 0.1 * 8 / 15) < 1e-9);
+    assert.ok(Math.abs(standard[1] - 240 * 0.1 * 8 / 15) < 1e-9);
+    const enlarged = renderLabels(150);
+    assert.ok(Math.abs(enlarged[0] / standard[0] - 1.5) < 1e-9);
+    assert.ok(Math.abs(enlarged[1] / standard[1] - 1.5) < 1e-9);
+    const reduced = renderLabels(62.5);
+    assert.ok(Math.abs(reduced[0] / standard[0] - 5 / 8) < 1e-9);
+    assert.ok(Math.abs(reduced[1] / standard[1] - 5 / 8) < 1e-9);
+  } finally {
+    Object.assign(R.view, originalView);
+    R.setLayer(originalLayer);
+  }
 });

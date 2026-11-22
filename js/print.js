@@ -232,7 +232,8 @@
     if (['plan', 'kyuseki'].indexOf(layer) < 0) return '';
     const scale = project.meta.scale || 50;
     const mm = (worldMm) => (worldMm / scale).toFixed(2);
-    return `<svg class="frame-scale-bar" style="width:${mm(1000)}mm;height:${mm(840)}mm;right:${mm(280)}mm;bottom:${mm(200)}mm"
+    const textSize = 240 * global.Model.DEFAULT_FONT_SIZE / 15 * ((project.meta.fontScale || 100) / 100);
+    return `<svg class="frame-scale-bar" style="width:${mm(1000)}mm;height:${mm(840)}mm;right:${mm(280)}mm;bottom:${mm(200)}mm;--scale-label-size:${textSize}px"
       viewBox="0 0 1000 840" overflow="visible" aria-label="縮尺 1/${scale}">
       <line x1="0" y1="420" x2="1000" y2="420"></line>
       <line x1="0" y1="290" x2="0" y2="550"></line>
@@ -269,7 +270,7 @@
   .sheet img { display: block; width: 100%; height: 100%; }
   .frame-scale-bar { position: absolute; z-index: 2; overflow: visible; pointer-events: none; }
   .frame-scale-bar line { stroke: #111; stroke-width: 20; stroke-linecap: square; }
-  .frame-scale-bar text { fill: #111; font: 700 240px -apple-system, "Hiragino Sans", sans-serif; }
+  .frame-scale-bar text { fill: #111; font: 700 var(--scale-label-size) -apple-system, "Hiragino Sans", sans-serif; }
   @media print { .noprint { display: none; } }
   .noprint { text-align: center; padding: 8px; }
   .noprint button { font-size: 13px; padding: 6px 16px; cursor: pointer; }

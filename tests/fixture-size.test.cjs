@@ -129,10 +129,33 @@ test('screen and print scale the circle and its symbol together, while print omi
   assert.equal(print.arcs[0].fill, '#ffffff');
   assert.equal(screen.arcs[0].stroke, '#d32f2f');
   assert.equal(print.arcs[0].stroke, '#333333');
-  assert.equal(screen.labels.find((label) => label.text === 'SP').font, 'bold 8.5px sans-serif');
-  assert.equal(print.labels.find((label) => label.text === 'SP').font, 'bold 8.5px sans-serif');
+  const symbolSize = result => parseFloat(result.labels.find((label) => label.text === 'SP').font.replace('bold ', ''));
+  assert.ok(Math.abs(symbolSize(screen) - 8.5 * 8 / 15) < 1e-9);
+  assert.equal(symbolSize(print), symbolSize(screen));
   fixture.symbolScale = 2;
   const larger = recordEquipment(project, null, false);
   assert.equal(larger.arcs[0].radius, 44);
-  assert.equal(larger.labels.find((label) => label.text === 'SP').font, 'bold 34px sans-serif');
+  assert.ok(Math.abs(symbolSize(larger) - 34 * 8 / 15) < 1e-9);
+});
+
+test('fixture text defaults to 8 and a chosen size 5 is retained without changing the symbol circle', () => {
+  const project = M.defaultProject();
+  project.meta.showPaperFrame = false;
+  const fixture = M.addFixture(project, 'spotlight');
+  fixture.symbolScale = 1;
+  const size = result => parseFloat(result.labels.find(label => label.text === 'SP').font.replace('bold ', ''));
+  const standard = recordEquipment(project, null, false);
+  fixture.fontSize = 5;
+  const loaded = M.deserialize(M.serialize(project));
+  const saved = M.findById(loaded, fixture.id).element;
+  assert.equal(saved.fontSize, 5);
+  const small = recordEquipment(loaded, null, false);
+  const printed = recordEquipment(loaded, null, true);
+  assert.equal(small.arcs[0].radius, standard.arcs[0].radius);
+  assert.ok(Math.abs(size(small) / size(standard) - 5 / 8) < 1e-9);
+  assert.equal(size(printed), size(small));
+  loaded.meta.fontScale = 150;
+  assert.equal(size(recordEquipment(loaded, null, false)), size(small), 'explicit size overrides global font scale');
+  delete saved.fontSize;
+  assert.ok(Math.abs(size(recordEquipment(loaded, null, false)) / size(standard) - 1.5) < 1e-9);
 });
