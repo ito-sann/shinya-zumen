@@ -1760,8 +1760,13 @@
         html += '<p class="muted">長さは外端から外端まで。横・縦は回転前の向きです。Shiftを押しながらドラッグすると、移動の単位に吸着せず調整できます。</p>';
         html += `<label class="check-row"><input type="checkbox" data-fieldbool="mirrorL" ${el.mirrorL ? 'checked' : ''}> L字の突起を左右反転</label>`;
       } else {
-        html += propNum(kind === 'fittings' ? '長さ(mm)' : '幅(mm)', 'w', el.w);
-        html += propNum(kind === 'fittings' ? '厚み(mm)' : '奥行(mm)', 'h', el.h);
+        if (kind === 'fittings' && el.kind === 'pillar') {
+          html += propNum('横の長さ(mm)', 'w', el.w);
+          html += propNum('縦の長さ(mm)', 'h', el.h);
+        } else {
+          html += propNum(kind === 'fittings' ? '長さ(mm)' : '幅(mm)', 'w', el.w);
+          html += propNum(kind === 'fittings' ? '厚み(mm)' : '奥行(mm)', 'h', el.h);
+        }
       }
       html += propNum('角度(度)', 'rotation', el.rotation || 0);
       if (kind === 'fittings') {

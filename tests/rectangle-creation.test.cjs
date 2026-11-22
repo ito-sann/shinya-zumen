@@ -99,3 +99,20 @@ test('rectangle dimensions, drawing style, and inner-measured walls survive savi
     { x: 60, y: 150, w: 4417, h: 3166 });
   assert.equal(G.buildTable(loaded).rows.length, 0);
 });
+
+test('pillar fitting stores independent horizontal and vertical dimensions', () => {
+  const project = M.defaultProject();
+  const pillar = M.addFitting(project, 'pillar');
+  assert.equal(M.FITTING_CATALOG.pillar.category, 'fitting');
+  assert.equal(pillar.label, '柱');
+  assert.equal(pillar.w, 300);
+  assert.equal(pillar.h, 300);
+  pillar.w = 450;
+  pillar.h = 625;
+  const loaded = M.deserialize(M.serialize(project));
+  const savedPillar = M.findById(loaded, pillar.id).element;
+  assert.equal(savedPillar.kind, 'pillar');
+  assert.equal(savedPillar.w, 450);
+  assert.equal(savedPillar.h, 625);
+  assert.deepEqual(plain(savedPillar.layers), ['plan', 'kyuseki']);
+});
