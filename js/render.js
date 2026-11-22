@@ -2088,19 +2088,13 @@
     ctx.restore();
   }
 
-  /* 頂点を動かす間、接する辺の長さを一時表示する。外周だけ閉じた辺も含む。 */
-  function drawVertexMeasurements(ctx, project, measurement) {
-    if (!measurement) return;
-    const found = global.Model.findById(project, measurement.id);
-    if (!found || found.kind !== measurement.kind) return;
+  /* 選択中の線・内壁・外周の各辺の長さを表示する。外周は閉じた辺も含む。 */
+  function drawSelectedEdgeMeasurements(ctx, project, selectedId) {
+    if (!selectedId) return;
+    const found = global.Model.findById(project, selectedId);
+    if (!found || !['lines', 'walls', 'premise'].includes(found.kind)) return;
     const pts = global.Geometry.polygonAbsPoints(found.element);
-    const i = measurement.index;
-    if (i < 0 || i >= pts.length || pts.length < 2) return;
-    const neighbors = [];
-    if (i > 0) neighbors.push(i - 1);
-    else if (measurement.kind === 'premise') neighbors.push(pts.length - 1);
-    if (i < pts.length - 1) neighbors.push(i + 1);
-    else if (measurement.kind === 'premise') neighbors.push(0);
+    if (pts.length < 2) return;
     ctx.save();
     ctx.font = `${fontPx(240)}px sans-serif`;
     ctx.textAlign = 'center';
@@ -2108,8 +2102,9 @@
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#fff';
     ctx.fillStyle = '#d32f2f';
-    for (const j of neighbors) {
-      const a = pts[i], b = pts[j];
+    const edgeCount = found.kind === 'premise' && pts.length > 2 ? pts.length : pts.length - 1;
+    for (let i = 0; i < edgeCount; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
       const mid = worldToScreen((a.x + b.x) / 2, (a.y + b.y) / 2);
       const label = global.Geometry.mmToM(Math.hypot(a.x - b.x, a.y - b.y)).toFixed(2) + 'm';
       ctx.strokeText(label, mid.x, mid.y - 5);
@@ -2296,7 +2291,7 @@
     if (state.draft && state.draft.points) {
       drawDraft(ctx, state.draft, ['line', 'lineSingle', 'wall', 'premise'].includes(state.draftKind));
     }
-    if (!(opts && opts.print)) drawVertexMeasurements(ctx, project, state.vertexMeasurement);
+    if (!(opts && opts.print)) drawSelectedEdgeMeasurements(ctx, project, state.selectedId);
     if (project.meta.showNorthMark) {
       drawNorthMark(ctx, canvas, project);
     }

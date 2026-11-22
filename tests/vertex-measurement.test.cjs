@@ -25,7 +25,7 @@ function canvasRecorder() {
 }
 
 for (const kind of ['line', 'wall', 'premise']) {
-  test(`${kind}: vertex drag displays adjacent distances and removes them on release`, () => {
+  test(`${kind}: selection displays edge lengths and keeps them updated after dragging`, () => {
     const project = Model.defaultProject();
     project.regions = [];
     project.meta.showPaperFrame = false;
@@ -39,6 +39,9 @@ for (const kind of ['line', 'wall', 'premise']) {
     const { ctx, labels } = canvasRecorder();
     Render.setLayer('plan');
     Render.render(ctx, canvas, project, state);
+    assert.ok(labels.includes('3.00m'));
+    assert.ok(labels.includes('4.00m'));
+    if (kind === 'premise') assert.ok(labels.includes('5.00m'));
     Interactions.attach(canvas, ctx, project, state, () => {}, () => {});
     const vertex = Render.worldToScreen(...Object.values(Geometry.polygonAbsPoints(el)[0]));
     handlers['canvas:mousedown']({ clientX: vertex.x, clientY: vertex.y });
@@ -54,6 +57,14 @@ for (const kind of ['line', 'wall', 'premise']) {
     assert.equal(state.vertexMeasurement, null);
     labels.length = 0;
     Render.render(ctx, canvas, project, state);
+    assert.ok(labels.includes('3.16m'));
+    state.selectedId = null;
+    labels.length = 0;
+    Render.render(ctx, canvas, project, state);
+    assert.ok(!labels.includes('3.16m'));
+    state.selectedId = el.id;
+    labels.length = 0;
+    Render.render(ctx, canvas, project, state, { print: true });
     assert.ok(!labels.includes('3.16m'));
   });
 }
