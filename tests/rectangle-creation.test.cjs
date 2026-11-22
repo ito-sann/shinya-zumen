@@ -5,10 +5,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const context = vm.createContext({ window: {} });
-for (const name of ['model', 'geometry']) {
+for (const name of ['model', 'geometry', 'render']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', name + '.js'), 'utf8'), context);
 }
-const { Model: M, Geometry: G } = context.window;
+const { Model: M, Geometry: G, Render: R } = context.window;
 const plain = (v) => JSON.parse(JSON.stringify(v));
 const rectangle = (x, y, width, height) => [
   { x, y }, { x: x + width, y },
@@ -115,4 +115,37 @@ test('pillar fitting stores independent horizontal and vertical dimensions', () 
   assert.equal(savedPillar.w, 450);
   assert.equal(savedPillar.h, 625);
   assert.deepEqual(plain(savedPillar.layers), ['plan', 'kyuseki']);
+});
+
+test('a pillar has an unfilled outline and a centered black label on screen and in print', () => {
+  const project = M.defaultProject();
+  project.regions = [];
+  project.meta.showPaperFrame = false;
+  project.meta.showNorthMark = false;
+  const pillar = M.addFitting(project, 'pillar');
+  pillar.rotation = 37;
+  R.view.zoom = 0.1;
+  R.setLayer('plan');
+  for (const [selected, print] of [[false, false], [true, false], [false, true]]) {
+    const events = [];
+    const base = {};
+    const ctx = new Proxy(base, {
+      get(obj, key) {
+        if (key === 'measureText') return value => ({ width: String(value).length * parseFloat(obj.font) });
+        if (key === 'fillRect' || key === 'strokeRect') return (...args) => events.push({ type: key, args, color: key === 'fillRect' ? obj.fillStyle : obj.strokeStyle });
+        if (key === 'fillText') return (value, x, y) => events.push({ type: 'text', value, x, y, color: obj.fillStyle, align: obj.textAlign, baseline: obj.textBaseline });
+        return key in obj ? obj[key] : () => {};
+      },
+      set(obj, key, value) { obj[key] = value; return true; },
+    });
+    R.render(ctx, { width: 800, height: 600 }, project,
+      { selectedId: selected ? pillar.id : null }, { print });
+    const outline = events.find(e => e.type === 'strokeRect' && e.args[2] === 30 && e.args[3] === 30);
+    assert.ok(outline, 'pillar outline is drawn');
+    assert.equal(outline.color, selected ? '#d32f2f' : '#000000');
+    assert.ok(!events.some(e => e.type === 'fillRect' && e.args[2] === 30 && e.args[3] === 30), 'pillar has no fill');
+    const label = events.find(e => e.type === 'text' && e.value === '柱');
+    assert.ok(label, 'pillar label is drawn');
+    assert.deepEqual([label.x, label.y, label.color, label.align, label.baseline], [0, 0, '#000000', 'center', 'middle']);
+  }
 });

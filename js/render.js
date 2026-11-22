@@ -684,10 +684,23 @@
       ctx.fillStyle = sel ? 'rgba(211,47,47,.85)' : '#546e7a';
       ctx.fillRect(-w / 2, -h / 2, w, h);
     } else if (g.kind === 'pillar') {
-      ctx.fillStyle = sel ? 'rgba(211,47,47,.85)' : '#455a64';
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.strokeStyle = '#263238';
+      // 柱は塗りつぶさず、枠の中心に名前を黒字で表示する。
+      ctx.strokeStyle = sel ? '#d32f2f' : '#000000';
       ctx.strokeRect(-w / 2, -h / 2, w, h);
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = g.label || '柱';
+      const rot = (g.rotation || 0) * Math.PI / 180;
+      const size = fontPx(180, g);
+      ctx.font = `${size}px sans-serif`;
+      // 細い柱や回転した柱でも文字が枠からはみ出しにくいようにする。
+      const textWidth = ctx.measureText(label).width || size;
+      const cos = Math.abs(Math.cos(rot)), sin = Math.abs(Math.sin(rot));
+      const fit = Math.min(1, Math.abs(w) * 0.8 / (textWidth * cos + size * sin),
+        Math.abs(h) * 0.8 / (textWidth * sin + size * cos));
+      if (fit > 0 && fit < 1) ctx.font = `${size * fit}px sans-serif`;
+      fillTextUpright(ctx, rot, 0, 0, label);
     } else if (g.kind === 'window') {
       // 枠 + 二重線(ガラス)
       ctx.strokeStyle = sel ? '#d32f2f' : '#1565c0';
