@@ -95,12 +95,13 @@ test('large symbols are selectable at their edges and tiny symbols retain a usab
 });
 
 function recordEquipment(project, selectedId, print) {
-  const arcs = [], labels = [], stack = [];
+  const arcs = [], rects = [], labels = [], stack = [];
   const ctx = {
     fillStyle: '', strokeStyle: '', font: '',
     save() { stack.push({ fillStyle: this.fillStyle, strokeStyle: this.strokeStyle, font: this.font }); },
     restore() { Object.assign(this, stack.pop()); },
     arc(x, y, radius) { arcs.push({ x, y, radius }); },
+    rect(x, y, width, height) { rects.push({ x, y, width, height }); },
     fill() { if (arcs.length) arcs.at(-1).fill = this.fillStyle; },
     fillText(text, x, y) { labels.push({ text, x, y, font: this.font }); },
     stroke() { if (arcs.length && !('stroke' in arcs.at(-1))) arcs.at(-1).stroke = this.strokeStyle; },
@@ -113,8 +114,22 @@ function recordEquipment(project, selectedId, print) {
   R.view.zoom = 0.1;
   R.view.offsetX = R.view.offsetY = 0;
   R.render(ctx, { width: 800, height: 600 }, project, { selectedId }, { print });
-  return { arcs, labels };
+  return { arcs, rects, labels };
 }
+
+test('monitor uses a selectable horizontal rectangle on screen and in print', () => {
+  const project = M.defaultProject();
+  project.meta.showPaperFrame = false;
+  const fixture = M.addFixture(project, 'monitor');
+  Object.assign(fixture, { x: 0, y: 0, symbolScale: 2 });
+  for (const print of [false, true]) {
+    const result = recordEquipment(project, fixture.id, print);
+    assert.equal(result.arcs.length, 0);
+    assert.deepEqual(result.rects[0], { x: -44, y: -22, width: 88, height: 44 });
+    assert.ok(result.labels.some((label) => label.text === 'MON'));
+  }
+  assert.equal(I.hitTest(project, 430, 210), fixture);
+});
 
 test('screen and print scale the circle and its symbol together, while print omits selection color', () => {
   const project = M.defaultProject();

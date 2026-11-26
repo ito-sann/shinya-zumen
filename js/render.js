@@ -1084,7 +1084,11 @@
     const sym = ((global.Model.FIXTURE_CATALOG[x.kind] || {}).symbol || '?') + (branch ? '-' + branch : '');
     ctx.save();
     ctx.beginPath();
-    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    if (x.kind === 'monitor') {
+      ctx.rect(p.x - r, p.y - r / 2, r * 2, r);
+    } else {
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    }
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.lineWidth = opts.selected ? 3 : 1.5;
